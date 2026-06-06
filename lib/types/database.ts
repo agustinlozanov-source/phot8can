@@ -247,17 +247,18 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['invitations']['Insert']>;
       };
     };
+    Views: { [_ in never]: never };
     Functions: {
       is_super_admin: {
-        Args: Record<PropertyKey, never>;
+        Args: Record<string, never>;
         Returns: boolean;
       };
       current_organization_id: {
-        Args: Record<PropertyKey, never>;
+        Args: Record<string, never>;
         Returns: string;
       };
       current_user_id: {
-        Args: Record<PropertyKey, never>;
+        Args: Record<string, never>;
         Returns: string;
       };
       current_user_has_permission: {
@@ -265,6 +266,8 @@ export interface Database {
         Returns: boolean;
       };
     };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }
 
