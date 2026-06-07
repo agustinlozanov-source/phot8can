@@ -64,6 +64,7 @@ export interface Database {
           created_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['organizations']['Insert']>;
+        Relationships: [];
       };
 
       // ============================================================
@@ -89,6 +90,7 @@ export interface Database {
           last_login_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['super_admins']['Insert']>;
+        Relationships: [];
       };
 
       // ============================================================
@@ -132,6 +134,15 @@ export interface Database {
           last_login_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['users']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'users_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          }
+        ];
       };
 
       // ============================================================
@@ -152,6 +163,7 @@ export interface Database {
           description: string;
         };
         Update: Partial<Database['public']['Tables']['permissions']['Insert']>;
+        Relationships: [];
       };
 
       // ============================================================
@@ -179,6 +191,7 @@ export interface Database {
           created_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['roles']['Insert']>;
+        Relationships: [];
       };
 
       // ============================================================
@@ -195,6 +208,7 @@ export interface Database {
           permission_id: string;
         };
         Update: Partial<Database['public']['Tables']['role_permissions']['Insert']>;
+        Relationships: [];
       };
 
       // ============================================================
@@ -213,6 +227,7 @@ export interface Database {
           assigned_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['user_roles']['Insert']>;
+        Relationships: [];
       };
 
       // ============================================================
@@ -245,6 +260,7 @@ export interface Database {
           invited_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['invitations']['Insert']>;
+        Relationships: [];
       };
     };
     Views: { [_ in never]: never };
