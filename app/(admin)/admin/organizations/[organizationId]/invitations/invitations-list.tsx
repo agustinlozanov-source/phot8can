@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { cancelInvitation } from './actions';
+import { cancelInvitation } from '@/lib/actions/invitations';
 import { Copy, Check, X, Clock } from 'lucide-react';
 import type { Invitation } from '@/lib/types/database';
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createInvitation } from './actions';
+import { createInvitation } from '@/lib/actions/invitations';
 import { Loader2, Mail, X, Copy, Check } from 'lucide-react';
 import type { Role } from '@/lib/types/database';
 

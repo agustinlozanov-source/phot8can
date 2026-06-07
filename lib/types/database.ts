@@ -191,7 +191,15 @@ export interface Database {
           created_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['roles']['Insert']>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'roles_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          }
+        ];
       };
 
       // ============================================================
@@ -208,7 +216,22 @@ export interface Database {
           permission_id: string;
         };
         Update: Partial<Database['public']['Tables']['role_permissions']['Insert']>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'role_permissions_role_id_fkey';
+            columns: ['role_id'];
+            isOneToOne: false;
+            referencedRelation: 'roles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'role_permissions_permission_id_fkey';
+            columns: ['permission_id'];
+            isOneToOne: false;
+            referencedRelation: 'permissions';
+            referencedColumns: ['id'];
+          }
+        ];
       };
 
       // ============================================================
@@ -227,7 +250,22 @@ export interface Database {
           assigned_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['user_roles']['Insert']>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'user_roles_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_roles_role_id_fkey';
+            columns: ['role_id'];
+            isOneToOne: false;
+            referencedRelation: 'roles';
+            referencedColumns: ['id'];
+          }
+        ];
       };
 
       // ============================================================
@@ -260,7 +298,15 @@ export interface Database {
           invited_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['invitations']['Insert']>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'invitations_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          }
+        ];
       };
     };
     Views: { [_ in never]: never };

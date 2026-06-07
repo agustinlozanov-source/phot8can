@@ -1,4 +1,4 @@
-import { getInvitationByToken } from '@/app/(admin)/admin/organizations/[organizationId]/invitations/actions';
+import { getInvitationByToken } from '@/lib/actions/invitations';
 import { AcceptInvitationForm } from './accept-form';
 import { XCircle } from 'lucide-react';
 import Link from 'next/link';

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 // ============================================================
-// SCHEMAS DE VALIDACIÓN
+// SCHEMAS
 // ============================================================
 
 const createInvitationSchema = z.object({
@@ -28,21 +28,28 @@ const acceptInvitationSchema = z.object({
 });
 
 // ============================================================
-// CREAR INVITACIÓN
+// HELPERS DE AUTORIZACIÓN
 // ============================================================
 
-export async function createInvitation(formData: FormData) {
+/**
+ * Verifica que el usuario actual pueda gestionar usuarios de la org indicada.
+ * Permite: super admins (cualquier org) o usuarios con permiso config.users
+ * de la organización correspondiente.
+ */
+async function canManageUsers(organizationId: string): Promise<
+  { allowed: true; isSuperAdmin: boolean; userId?: string } | { allowed: false; error: string }
+> {
   const supabase = await createClient();
 
-  // Verificar que el usuario actual sea super admin
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: 'No autenticado' };
+    return { allowed: false, error: 'No autenticado' };
   }
 
+  // ¿Es super admin?
   const { data: superAdmin } = await supabase
     .from('super_admins')
     .select('id')
@@ -50,11 +57,39 @@ export async function createInvitation(formData: FormData) {
     .eq('is_active', true)
     .maybeSingle();
 
-  if (!superAdmin) {
-    return { error: 'Solo super admins pueden crear invitaciones desde aquí' };
+  if (superAdmin) {
+    return { allowed: true, isSuperAdmin: true };
   }
 
-  // Parsear datos
+  // ¿Es usuario de esa organización con permiso config.users?
+  const { data: appUser } = await supabase
+    .from('users')
+    .select('id, organization_id')
+    .eq('auth_user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!appUser || appUser.organization_id !== organizationId) {
+    return { allowed: false, error: 'No autorizado para esta organización' };
+  }
+
+  // Verificar permiso vía función SQL
+  const { data: hasPermission } = await supabase.rpc('current_user_has_permission', {
+    permission_code: 'config.users',
+  });
+
+  if (!hasPermission) {
+    return { allowed: false, error: 'No tienes permiso para gestionar usuarios' };
+  }
+
+  return { allowed: true, isSuperAdmin: false, userId: appUser.id };
+}
+
+// ============================================================
+// CREAR INVITACIÓN
+// ============================================================
+
+export async function createInvitation(formData: FormData) {
   const rawData = {
     organizationId: formData.get('organizationId') as string,
     email: (formData.get('email') as string)?.toLowerCase().trim(),
@@ -63,13 +98,20 @@ export async function createInvitation(formData: FormData) {
     roleIds: formData.getAll('roleIds') as string[],
   };
 
-  // Validar
   const validation = createInvitationSchema.safeParse(rawData);
   if (!validation.success) {
     return { error: validation.error.errors[0].message };
   }
 
   const data = validation.data;
+
+  // Verificar autorización
+  const auth = await canManageUsers(data.organizationId);
+  if (!auth.allowed) {
+    return { error: auth.error };
+  }
+
+  const supabase = await createClient();
 
   // Verificar que no exista ya un usuario con ese email en esa org
   const { data: existingUser } = await supabase
@@ -95,7 +137,8 @@ export async function createInvitation(formData: FormData) {
 
   if (existingInvitation) {
     return {
-      error: 'Ya existe una invitación pendiente para ese email. Cancélala primero si quieres crear una nueva.',
+      error:
+        'Ya existe una invitación pendiente para ese email. Cancélala primero si quieres crear una nueva.',
     };
   }
 
@@ -108,6 +151,7 @@ export async function createInvitation(formData: FormData) {
       first_name: data.firstName,
       last_name: data.lastName,
       roles_to_assign: data.roleIds,
+      invited_by: auth.isSuperAdmin ? null : auth.userId,
     })
     .select('id, token')
     .single();
@@ -116,7 +160,9 @@ export async function createInvitation(formData: FormData) {
     return { error: `Error al crear invitación: ${insertError.message}` };
   }
 
+  // Revalidar ambas rutas posibles
   revalidatePath(`/admin/organizations/${data.organizationId}`);
+  revalidatePath('/team');
 
   return {
     success: true,
@@ -132,26 +178,7 @@ export async function createInvitation(formData: FormData) {
 export async function cancelInvitation(invitationId: string) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: 'No autenticado' };
-  }
-
-  const { data: superAdmin } = await supabase
-    .from('super_admins')
-    .select('id')
-    .eq('auth_user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (!superAdmin) {
-    return { error: 'Permiso denegado' };
-  }
-
-  // Obtener org id para revalidate
+  // Obtener org id primero
   const { data: invitation } = await supabase
     .from('invitations')
     .select('organization_id')
@@ -160,6 +187,12 @@ export async function cancelInvitation(invitationId: string) {
 
   if (!invitation) {
     return { error: 'Invitación no encontrada' };
+  }
+
+  // Verificar autorización
+  const auth = await canManageUsers(invitation.organization_id);
+  if (!auth.allowed) {
+    return { error: auth.error };
   }
 
   const { error: deleteError } = await supabase
@@ -172,15 +205,15 @@ export async function cancelInvitation(invitationId: string) {
   }
 
   revalidatePath(`/admin/organizations/${invitation.organization_id}`);
+  revalidatePath('/team');
   return { success: true };
 }
 
 // ============================================================
-// VALIDAR TOKEN DE INVITACIÓN (público)
+// VALIDAR TOKEN (público)
 // ============================================================
 
 export async function getInvitationByToken(token: string) {
-  // Usamos service client porque esta función es pública (sin auth)
   const supabase = await createServiceClient();
 
   const { data: invitation, error } = await supabase
@@ -201,7 +234,6 @@ export async function getInvitationByToken(token: string) {
     return { error: 'Esta invitación ha expirado' };
   }
 
-  // Obtener nombre de la organización
   const { data: org } = await supabase
     .from('organizations')
     .select('name')
@@ -218,11 +250,10 @@ export async function getInvitationByToken(token: string) {
 }
 
 // ============================================================
-// ACEPTAR INVITACIÓN
+// ACEPTAR INVITACIÓN (público)
 // ============================================================
 
 export async function acceptInvitation(formData: FormData) {
-  // Usamos service client porque el invitado aún no tiene auth
   const supabase = await createServiceClient();
 
   const rawData = {
@@ -235,7 +266,6 @@ export async function acceptInvitation(formData: FormData) {
     return { error: validation.error.errors[0].message };
   }
 
-  // Validar invitación
   const { data: invitation, error: invError } = await supabase
     .from('invitations')
     .select('*')
@@ -254,7 +284,6 @@ export async function acceptInvitation(formData: FormData) {
     return { error: 'Esta invitación ha expirado' };
   }
 
-  // Crear cuenta en Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: invitation.email,
     password: validation.data.password,
@@ -270,7 +299,6 @@ export async function acceptInvitation(formData: FormData) {
     return { error: `Error al crear cuenta: ${authError?.message}` };
   }
 
-  // Crear registro en users
   const { data: newUser, error: userError } = await supabase
     .from('users')
     .insert({
@@ -285,30 +313,23 @@ export async function acceptInvitation(formData: FormData) {
     .single();
 
   if (userError || !newUser) {
-    // Rollback: eliminar el auth user creado
     await supabase.auth.admin.deleteUser(authData.user.id);
     return { error: `Error al crear usuario: ${userError?.message}` };
   }
 
-  // Asignar roles
   if (invitation.roles_to_assign && invitation.roles_to_assign.length > 0) {
     const roleAssignments = invitation.roles_to_assign.map((roleId: string) => ({
       user_id: newUser.id,
       role_id: roleId,
     }));
 
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .insert(roleAssignments);
+    const { error: roleError } = await supabase.from('user_roles').insert(roleAssignments);
 
     if (roleError) {
       console.error('Error asignando roles:', roleError);
-      // No hacemos rollback aquí, el usuario ya está creado
-      // Se pueden asignar manualmente después
     }
   }
 
-  // Marcar invitación como aceptada
   await supabase
     .from('invitations')
     .update({ accepted_at: new Date().toISOString() })
