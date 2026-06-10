@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { getImpersonatedOrganizationId } from '@/lib/actions/impersonation';
 
 // ============================================================
 // SCHEMAS DE VALIDACIÓN
@@ -147,14 +148,19 @@ export async function createClientAction(formData: FormData) {
     return { error: validation.error.errors[0].message };
   }
 
-  // Si es super admin, debe venir organization_id explícito
+  // Si es super admin, obtener organization_id de la cookie de impersonation o del form
   let organizationId: string;
   if (ctx.isSuperAdmin) {
-    const orgFromForm = formData.get('organization_id') as string;
-    if (!orgFromForm) {
-      return { error: 'organization_id es requerido para super admin' };
+    const impersonatedOrgId = await getImpersonatedOrganizationId();
+    if (impersonatedOrgId) {
+      organizationId = impersonatedOrgId;
+    } else {
+      const orgFromForm = formData.get('organization_id') as string;
+      if (!orgFromForm) {
+        return { error: 'organization_id es requerido para super admin' };
+      }
+      organizationId = orgFromForm;
     }
-    organizationId = orgFromForm;
   } else {
     organizationId = ctx.organizationId;
   }
