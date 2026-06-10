@@ -112,6 +112,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
         requiredPermission: 'config.users',
       },
       {
+        label: 'Catálogo',
+        href: '/catalog/services',
+        icon: Package,
+        requiredPermission: 'config.services',
+      },
+      {
         label: 'Configuración',
         href: '/settings',
         icon: Settings,

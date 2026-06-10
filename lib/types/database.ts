@@ -401,6 +401,13 @@ export interface Database {
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'clients_current_package_id_fkey';
+            columns: ['current_package_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
           }
         ];
       };
@@ -468,6 +475,150 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // SERVICES (Módulo 03.A)
+      // ============================================================
+      services: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          description: string | null;
+          sku: string | null;
+          service_type: 'atomic' | 'package' | 'addon';
+          default_price: number;
+          currency: string;
+          unit: string;
+          color: string | null;
+          is_active: boolean;
+          archived_at: string | null;
+          archived_by: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          description?: string | null;
+          sku?: string | null;
+          service_type: 'atomic' | 'package' | 'addon';
+          default_price?: number;
+          currency?: string;
+          unit?: string;
+          color?: string | null;
+          is_active?: boolean;
+          archived_at?: string | null;
+          archived_by?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['services']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'services_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'services_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'services_archived_by_fkey';
+            columns: ['archived_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // PACKAGE_COMPOSITION (Módulo 03.A)
+      // ============================================================
+      package_composition: {
+        Row: {
+          id: string;
+          package_service_id: string;
+          included_service_id: string;
+          quantity: number;
+          position: number;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          package_service_id: string;
+          included_service_id: string;
+          quantity?: number;
+          position?: number;
+          notes?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['package_composition']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'package_composition_package_service_id_fkey';
+            columns: ['package_service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'package_composition_included_service_id_fkey';
+            columns: ['included_service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // TAXES (Módulo 03.A)
+      // ============================================================
+      taxes: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          code: string | null;
+          description: string | null;
+          percentage: number;
+          is_enabled: boolean;
+          apply_by_default: boolean;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          code?: string | null;
+          description?: string | null;
+          percentage: number;
+          is_enabled?: boolean;
+          apply_by_default?: boolean;
+          position?: number;
+        };
+        Update: Partial<Database['public']['Tables']['taxes']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'taxes_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -503,3 +654,7 @@ export type Invitation = Database['public']['Tables']['invitations']['Row'];
 export type Client = Database['public']['Tables']['clients']['Row'];
 export type Contact = Database['public']['Tables']['contacts']['Row'];
 export type ClientStatus = Database['public']['Tables']['clients']['Row']['status'];
+export type Service = Database['public']['Tables']['services']['Row'];
+export type ServiceType = Database['public']['Tables']['services']['Row']['service_type'];
+export type PackageComposition = Database['public']['Tables']['package_composition']['Row'];
+export type Tax = Database['public']['Tables']['taxes']['Row'];
