@@ -124,7 +124,7 @@ export function NewClientButton({ users }: NewClientButtonProps) {
                 <Input
                   id="website"
                   name="website"
-                  type="url"
+                  type="text"
                   disabled={isLoading}
                   placeholder="https://"
                 />

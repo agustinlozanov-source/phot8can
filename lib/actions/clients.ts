@@ -24,7 +24,7 @@ const createClientSchema = z.object({
   legal_name: z.string().max(200).optional().nullable(),
   tax_id: z.string().max(50).optional().nullable(),
   industry: z.string().max(100).optional().nullable(),
-  website: z.string().url('URL inválida').or(z.literal('')).optional().nullable(),
+  website: z.string().max(500).optional().nullable(),
   address: addressSchema,
   acquisition_source: z.string().max(200).optional().nullable(),
   notes: z.string().optional().nullable(),
