@@ -32,7 +32,7 @@ export function NewClientButton({ users }: NewClientButtonProps) {
 
     if (result?.success && result.clientId) {
       setOpen(false);
-      router.push('/clients');
+      router.push(`/clients/${result.clientId}`);
       router.refresh();
     }
   }
