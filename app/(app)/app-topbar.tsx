@@ -1,17 +1,17 @@
 'use client';
 
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/app/(auth)/login/actions';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/lib/types/database';
 
 interface AppTopbarProps {
-  user: User;
+  displayName: string;
+  initials: string;
   roles: Array<{ id: string; name: string; color: string | null }>;
 }
 
-export function AppTopbar({ user, roles }: AppTopbarProps) {
+export function AppTopbar({ displayName, initials, roles }: AppTopbarProps) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -19,9 +19,6 @@ export function AppTopbar({ user, roles }: AppTopbarProps) {
     router.push('/login');
     router.refresh();
   }
-
-  // Iniciales para el avatar
-  const initials = `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
 
   return (
     <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10 flex items-center justify-between px-6">
@@ -49,9 +46,7 @@ export function AppTopbar({ user, roles }: AppTopbarProps) {
           <div className="w-6 h-6 rounded bg-gradient-to-br from-photocan-amber to-photocan-amber-deep grid place-items-center text-[10px] font-bold text-black">
             {initials}
           </div>
-          <div className="text-sm font-medium">
-            {user.first_name} {user.last_name}
-          </div>
+          <div className="text-sm font-medium">{displayName}</div>
         </div>
 
         <Button variant="ghost" size="sm" onClick={handleLogout}>

@@ -1,81 +1,82 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getActiveContext, getActiveRoles } from '@/lib/auth/context';
 import { AppSidebar } from './app-sidebar';
 import { AppTopbar } from './app-topbar';
+import { ImpersonationBanner } from './impersonation-banner';
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  const ctx = await getActiveContext();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  // No autenticado → login
+  if (ctx.mode === 'none') {
     redirect('/login');
   }
 
-  // Si es super admin, mandarlo a su panel
-  const { data: superAdmin } = await supabase
-    .from('super_admins')
-    .select('id')
-    .eq('auth_user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (superAdmin) {
+  // Super Admin sin impersonation → su panel
+  if (ctx.mode === 'admin') {
     redirect('/admin');
   }
 
-  // Obtener usuario con su organización
-  const { data: appUser } = await supabase
-    .from('users')
-    .select('*, organization:organizations(*)')
-    .eq('auth_user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
+  // Aquí solo entran:
+  //   - mode 'user' (usuario regular)
+  //   - mode 'impersonating' (Super Admin viendo una org)
+  // Ambos tienen ctx.organization disponible.
 
-  if (!appUser || !appUser.organization) {
+  if (!ctx.organization) {
     redirect('/login');
   }
 
-  // Obtener roles del usuario y sus permisos
-  const { data: userRoles } = await supabase
-    .from('user_roles')
-    .select('role:roles(id, name, color)')
-    .eq('user_id', appUser.id);
+  const roles = await getActiveRoles(ctx);
 
-  const roles = (userRoles || [])
-    .map((ur) => ur.role)
-    .filter((r): r is NonNullable<typeof r> => r !== null);
-
-  // Obtener todos los permisos del usuario
-  const { data: rolePermissions } = await supabase
-    .from('user_roles')
-    .select('role:roles(role_permissions(permission:permissions(code)))')
-    .eq('user_id', appUser.id);
-
-  const permissions = new Set<string>();
-  rolePermissions?.forEach((ur) => {
-    const role = ur.role as any;
-    role?.role_permissions?.forEach((rp: any) => {
-      if (rp.permission?.code) {
-        permissions.add(rp.permission.code);
-      }
-    });
-  });
+  // Construir array de permisos para pasar al sidebar
+  // Super Admin tiene "todos" los permisos efectivos (sidebar muestra todo)
+  const permissions = ctx.isSuperAdmin
+    ? [
+        'client.view',
+        'client.create',
+        'client.edit',
+        'contact.manage',
+        'quote.view',
+        'contract.view',
+        'strategy.view',
+        'work_order.view',
+        'schedule.view',
+        'finance.view',
+        'config.users',
+        'config.organization',
+        'conversation.view',
+      ]
+    : Array.from(ctx.permissions);
 
   return (
     <div className="min-h-screen grid grid-cols-[240px_1fr] bg-background">
       <AppSidebar
-        organization={appUser.organization}
-        permissions={Array.from(permissions)}
+        organization={ctx.organization}
+        permissions={permissions}
       />
       <div className="flex flex-col min-w-0">
-        <AppTopbar user={appUser} roles={roles} />
+        {ctx.mode === 'impersonating' && (
+          <ImpersonationBanner
+            organizationName={ctx.organization.name}
+          />
+        )}
+        <AppTopbar
+          displayName={
+            ctx.mode === 'user' && ctx.user
+              ? `${ctx.user.first_name} ${ctx.user.last_name}`
+              : 'Super Admin'
+          }
+          initials={
+            ctx.mode === 'user' && ctx.user
+              ? `${ctx.user.first_name.charAt(0)}${ctx.user.last_name.charAt(0)}`.toUpperCase()
+              : 'SA'
+          }
+          roles={roles}
+        />
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>

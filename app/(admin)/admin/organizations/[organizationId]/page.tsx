@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Building2, Users, Shield } from 'lucide-react';
 import { InvitationsList } from './invitations/invitations-list';
 import { InviteUserButton } from './invitations/invite-user-button';
+import { EnterOrgButton } from './enter-org-button';
 
 export default async function OrganizationDetailPage({
   params,
@@ -80,7 +81,7 @@ export default async function OrganizationDetailPage({
           </div>
         </div>
 
-        <div>
+        <div className="flex items-center gap-3">
           {org.is_active ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-mono text-green-500 bg-green-500/10 px-3 py-1.5 rounded-md">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -91,6 +92,13 @@ export default async function OrganizationDetailPage({
               <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
               Inactiva
             </span>
+          )}
+
+          {org.is_active && (
+            <EnterOrgButton
+              organizationId={organizationId}
+              organizationName={org.name}
+            />
           )}
         </div>
       </div>

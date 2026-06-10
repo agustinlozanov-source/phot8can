@@ -40,7 +40,6 @@ const navSections: { label: string; items: NavItem[] }[] = [
         href: '/clients',
         icon: Building2,
         requiredPermission: 'client.view',
-        comingSoon: true,
       },
       {
         label: 'Conversaciones',

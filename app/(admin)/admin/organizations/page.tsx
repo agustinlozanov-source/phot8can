@@ -47,13 +47,16 @@ export default async function OrganizationsPage() {
                 <th className="text-left px-4 py-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   Creada
                 </th>
+                <th className="text-right px-4 py-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody>
               {organizations.map((org) => (
                 <tr
                   key={org.id}
-                  className="border-t border-border hover:bg-secondary/30 transition-colors cursor-pointer"
+                  className="border-t border-border hover:bg-secondary/30 transition-colors"
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -103,6 +106,15 @@ export default async function OrganizationsPage() {
                       month: 'short',
                       year: 'numeric',
                     })}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/admin/organizations/${org.id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-photocan-amber hover:text-photocan-amber-deep"
+                    >
+                      Abrir
+                      <span aria-hidden>→</span>
+                    </Link>
                   </td>
                 </tr>
               ))}
