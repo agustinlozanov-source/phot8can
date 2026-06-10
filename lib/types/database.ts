@@ -305,6 +305,166 @@ export interface Database {
             isOneToOne: false;
             referencedRelation: 'organizations';
             referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'invitations_invited_by_fkey';
+            columns: ['invited_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // CLIENTS (Módulo 02)
+      // ============================================================
+      clients: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          legal_name: string | null;
+          tax_id: string | null;
+          tax_regime: string | null;
+          cfdi_use: string | null;
+          industry: string | null;
+          website: string | null;
+          address: Json | null;
+          logo_url: string | null;
+          brand_book_url: string | null;
+          status: 'active' | 'paused' | 'churned';
+          acquisition_source: string | null;
+          notes: string | null;
+          account_manager_id: string | null;
+          current_package_id: string | null;
+          package_started_at: string | null;
+          package_ends_at: string | null;
+          archived_at: string | null;
+          archived_by: string | null;
+          archive_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          legal_name?: string | null;
+          tax_id?: string | null;
+          tax_regime?: string | null;
+          cfdi_use?: string | null;
+          industry?: string | null;
+          website?: string | null;
+          address?: Json | null;
+          logo_url?: string | null;
+          brand_book_url?: string | null;
+          status?: 'active' | 'paused' | 'churned';
+          acquisition_source?: string | null;
+          notes?: string | null;
+          account_manager_id?: string | null;
+          current_package_id?: string | null;
+          package_started_at?: string | null;
+          package_ends_at?: string | null;
+          archived_at?: string | null;
+          archived_by?: string | null;
+          archive_reason?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['clients']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'clients_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'clients_account_manager_id_fkey';
+            columns: ['account_manager_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'clients_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'clients_archived_by_fkey';
+            columns: ['archived_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // CONTACTS (Módulo 02)
+      // ============================================================
+      contacts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          client_id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string | null;
+          position: string | null;
+          is_primary: boolean;
+          has_portal_access: boolean;
+          portal_auth_user_id: string | null;
+          telegram_user_id: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          client_id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone?: string | null;
+          position?: string | null;
+          is_primary?: boolean;
+          has_portal_access?: boolean;
+          portal_auth_user_id?: string | null;
+          telegram_user_id?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['contacts']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'contacts_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contacts_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contacts_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
           }
         ];
       };
@@ -340,3 +500,6 @@ export type User = Database['public']['Tables']['users']['Row'];
 export type Permission = Database['public']['Tables']['permissions']['Row'];
 export type Role = Database['public']['Tables']['roles']['Row'];
 export type Invitation = Database['public']['Tables']['invitations']['Row'];
+export type Client = Database['public']['Tables']['clients']['Row'];
+export type Contact = Database['public']['Tables']['contacts']['Row'];
+export type ClientStatus = Database['public']['Tables']['clients']['Row']['status'];
