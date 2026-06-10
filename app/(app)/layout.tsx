@@ -48,6 +48,7 @@ export default async function AppLayout({
         'finance.view',
         'config.users',
         'config.organization',
+        'config.services',
         'conversation.view',
       ]
     : Array.from(ctx.permissions);
