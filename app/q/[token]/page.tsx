@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { markAsViewedAction } from '@/lib/actions/quotes';
 import { PublicQuoteView } from './public-quote-view';
 import type { QuoteLayer } from '@/lib/types/database';
@@ -11,8 +11,11 @@ export default async function PublicQuotePage({
 }) {
   const { token } = await params;
 
-  // Cliente con service role para acceso público (sin RLS)
-  const supabase = await createServiceClient();
+  // Usar service role si está configurado, si no fallback a anon
+  const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabase = hasServiceRole
+    ? await createServiceClient()
+    : await createClient();
 
   // Cargar cotización por token
   const { data: quote, error: quoteError } = await supabase
