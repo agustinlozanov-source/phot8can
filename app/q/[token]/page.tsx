@@ -11,112 +11,71 @@ export default async function PublicQuotePage({
 }) {
   const { token } = await params;
 
-  // Usar service role si está configurado, si no fallback a anon
   const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabase = hasServiceRole
     ? await createServiceClient()
     : await createClient();
 
-  // Cargar cotización por token
+  // 1. Query mínima — solo la cotización por token, sin joins
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
-    .select(
-      `
-      *,
-      client:clients(id, name, legal_name, tax_id),
-      organization:organizations(id, name, primary_color, logo_url),
-      contact:contacts(id, first_name, last_name, email, phone, position)
-    `
-    )
+    .select('*')
     .eq('public_share_token', token)
     .maybeSingle();
 
   if (quoteError) {
-    console.error('[/q/[token]] Supabase error:', quoteError);
-    // Si las columnas primary_color/logo_url no existen en el DB real,
-    // intentamos una query de fallback sin esas columnas
-    const { data: quoteFallback, error: fallbackError } = await supabase
-      .from('quotes')
-      .select(
-        `
-        *,
-        client:clients(id, name, legal_name, tax_id),
-        organization:organizations(id, name),
-        contact:contacts(id, first_name, last_name, email, phone, position)
-      `
-      )
-      .eq('public_share_token', token)
-      .maybeSingle();
-
-    if (fallbackError) {
-      console.error('[/q/[token]] Fallback error:', fallbackError);
-      notFound();
-    }
-    if (!quoteFallback) notFound();
-
-    // Normalizar para que tenga primary_color y logo_url null
-    const quoteNormalized = {
-      ...quoteFallback,
-      organization: quoteFallback.organization
-        ? { ...quoteFallback.organization as object, primary_color: null, logo_url: null }
-        : null,
-    };
-
-    const layers = Array.isArray(quoteNormalized.layers)
-      ? (quoteNormalized.layers as unknown as QuoteLayer[])
-      : [];
-
-    if (!['sent', 'viewed', 'approved', 'rejected', 'expired'].includes(quoteNormalized.status)) {
-      notFound();
-    }
-
-    await markAsViewedAction(token);
-
-    const [itemsResult, adjustmentsResult, taxesResult] = await Promise.all([
-      supabase.from('quote_items').select('*').eq('quote_id', quoteNormalized.id).order('position'),
-      supabase.from('quote_adjustments').select('*').eq('quote_id', quoteNormalized.id).order('position'),
-      supabase.from('quote_taxes').select('*').eq('quote_id', quoteNormalized.id).order('position'),
-    ]);
-
-    return (
-      <PublicQuoteView
-        quote={quoteNormalized as any}
-        items={itemsResult.data || []}
-        adjustments={adjustmentsResult.data || []}
-        taxes={taxesResult.data || []}
-        layers={layers}
-      />
-    );
+    console.error('[/q] Error cargando quote:', JSON.stringify(quoteError));
+    notFound();
   }
-
-  if (!quote) notFound();
-
-  // Solo permitir ver si está enviada, vista, aprobada o rechazada
-  if (!['sent', 'viewed', 'approved', 'rejected', 'expired'].includes(quote.status)) {
+  if (!quote) {
+    console.error('[/q] Quote not found for token:', token);
     notFound();
   }
 
-  // Marcar como vista (solo cambia si está en 'sent' y no tiene viewed_at)
+  // 2. Verificar estado
+  if (!['sent', 'viewed', 'approved', 'rejected', 'expired'].includes(quote.status)) {
+    console.error('[/q] Status no permitido:', quote.status);
+    notFound();
+  }
+
+  // 3. Cargar relaciones por separado (no dependen de FKs en PostgREST)
+  const [clientResult, contactResult, orgResult, itemsResult, adjustmentsResult, taxesResult] =
+    await Promise.all([
+      supabase
+        .from('clients')
+        .select('id, name, legal_name, tax_id')
+        .eq('id', quote.client_id)
+        .maybeSingle(),
+      quote.contact_id
+        ? supabase
+            .from('contacts')
+            .select('id, first_name, last_name, email, phone, position')
+            .eq('id', quote.contact_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from('organizations')
+        .select('id, name, primary_color, logo_url')
+        .eq('id', quote.organization_id)
+        .maybeSingle(),
+      supabase.from('quote_items').select('*').eq('quote_id', quote.id).order('position'),
+      supabase.from('quote_adjustments').select('*').eq('quote_id', quote.id).order('position'),
+      supabase.from('quote_taxes').select('*').eq('quote_id', quote.id).order('position'),
+    ]);
+
+  if (orgResult.error) {
+    console.error('[/q] Error cargando org:', JSON.stringify(orgResult.error));
+  }
+
+  // 4. Marcar como vista
   await markAsViewedAction(token);
 
-  // Cargar items, ajustes, impuestos
-  const [itemsResult, adjustmentsResult, taxesResult] = await Promise.all([
-    supabase
-      .from('quote_items')
-      .select('*')
-      .eq('quote_id', quote.id)
-      .order('position'),
-    supabase
-      .from('quote_adjustments')
-      .select('*')
-      .eq('quote_id', quote.id)
-      .order('position'),
-    supabase
-      .from('quote_taxes')
-      .select('*')
-      .eq('quote_id', quote.id)
-      .order('position'),
-  ]);
+  const quoteWithRelations = {
+    ...quote,
+    client: clientResult.data ?? null,
+    contact: contactResult.data ?? null,
+    organization: orgResult.data ?? null,
+  };
 
   const layers = Array.isArray(quote.layers)
     ? (quote.layers as unknown as QuoteLayer[])
@@ -124,7 +83,7 @@ export default async function PublicQuotePage({
 
   return (
     <PublicQuoteView
-      quote={quote as any}
+      quote={quoteWithRelations as any}
       items={itemsResult.data || []}
       adjustments={adjustmentsResult.data || []}
       taxes={taxesResult.data || []}
