@@ -58,7 +58,6 @@ const navSections: { label: string; items: NavItem[] }[] = [
         href: '/quotes',
         icon: FileText,
         requiredPermission: 'quote.view',
-        comingSoon: true,
       },
       {
         label: 'Contratos',
