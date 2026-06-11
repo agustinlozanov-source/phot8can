@@ -905,6 +905,441 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // WAREHOUSES (Módulo Inventario)
+      // ============================================================
+      warehouses: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          type: 'fixed' | 'mobile' | 'personal';
+          assigned_to_user_id: string | null;
+          description: string | null;
+          location_notes: string | null;
+          is_active: boolean;
+          archived_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          type?: 'fixed' | 'mobile' | 'personal';
+          assigned_to_user_id?: string | null;
+          description?: string | null;
+          location_notes?: string | null;
+          is_active?: boolean;
+          archived_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['warehouses']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'warehouses_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'warehouses_assigned_to_user_id_fkey';
+            columns: ['assigned_to_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'warehouses_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // ASSETS (Módulo Inventario)
+      // ============================================================
+      assets: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          brand: string | null;
+          model: string | null;
+          serial_number: string | null;
+          category:
+            | 'camera'
+            | 'lens'
+            | 'audio'
+            | 'lighting'
+            | 'support'
+            | 'storage'
+            | 'power'
+            | 'cable'
+            | 'computer'
+            | 'drone'
+            | 'accessory'
+            | 'other';
+          current_warehouse_id: string | null;
+          current_holder_id: string | null;
+          status:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired';
+          photo_url: string | null;
+          estimated_value: number | null;
+          currency: string | null;
+          purchase_date: string | null;
+          purchase_invoice_number: string | null;
+          warranty_until: string | null;
+          notes: string | null;
+          archived_at: string | null;
+          archived_by: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          brand?: string | null;
+          model?: string | null;
+          serial_number?: string | null;
+          category?:
+            | 'camera'
+            | 'lens'
+            | 'audio'
+            | 'lighting'
+            | 'support'
+            | 'storage'
+            | 'power'
+            | 'cable'
+            | 'computer'
+            | 'drone'
+            | 'accessory'
+            | 'other';
+          current_warehouse_id?: string | null;
+          current_holder_id?: string | null;
+          status?:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired';
+          photo_url?: string | null;
+          estimated_value?: number | null;
+          currency?: string | null;
+          purchase_date?: string | null;
+          purchase_invoice_number?: string | null;
+          warranty_until?: string | null;
+          notes?: string | null;
+          archived_at?: string | null;
+          archived_by?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['assets']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'assets_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assets_current_warehouse_id_fkey';
+            columns: ['current_warehouse_id'];
+            isOneToOne: false;
+            referencedRelation: 'warehouses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assets_current_holder_id_fkey';
+            columns: ['current_holder_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assets_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assets_archived_by_fkey';
+            columns: ['archived_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // ASSET_REQUESTS (Módulo Inventario)
+      // ============================================================
+      asset_requests: {
+        Row: {
+          id: string;
+          organization_id: string;
+          requested_by: string;
+          purpose: string;
+          client_id: string | null;
+          start_date: string;
+          end_date: string;
+          status:
+            | 'pending'
+            | 'approved'
+            | 'active'
+            | 'returned'
+            | 'rejected'
+            | 'cancelled';
+          decided_by: string | null;
+          decided_at: string | null;
+          decision_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          requested_by: string;
+          purpose: string;
+          client_id?: string | null;
+          start_date: string;
+          end_date: string;
+          status?:
+            | 'pending'
+            | 'approved'
+            | 'active'
+            | 'returned'
+            | 'rejected'
+            | 'cancelled';
+          decided_by?: string | null;
+          decided_at?: string | null;
+          decision_notes?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['asset_requests']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'asset_requests_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_requests_requested_by_fkey';
+            columns: ['requested_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_requests_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_requests_decided_by_fkey';
+            columns: ['decided_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // ASSET_REQUEST_ITEMS (Módulo Inventario)
+      // ============================================================
+      asset_request_items: {
+        Row: {
+          id: string;
+          request_id: string;
+          asset_id: string;
+          checkout_at: string | null;
+          return_at: string | null;
+          checkout_notes: string | null;
+          return_notes: string | null;
+          return_condition: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          asset_id: string;
+          checkout_at?: string | null;
+          return_at?: string | null;
+          checkout_notes?: string | null;
+          return_notes?: string | null;
+          return_condition?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['asset_request_items']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'asset_request_items_request_id_fkey';
+            columns: ['request_id'];
+            isOneToOne: false;
+            referencedRelation: 'asset_requests';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_request_items_asset_id_fkey';
+            columns: ['asset_id'];
+            isOneToOne: false;
+            referencedRelation: 'assets';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // ASSET_MOVEMENTS (Módulo Inventario - log inmutable)
+      // ============================================================
+      asset_movements: {
+        Row: {
+          id: string;
+          organization_id: string;
+          asset_id: string;
+          movement_type:
+            | 'acquired'
+            | 'checkout'
+            | 'checkin'
+            | 'transfer'
+            | 'maintenance_out'
+            | 'maintenance_in'
+            | 'marked_lost'
+            | 'retired';
+          from_warehouse_id: string | null;
+          to_warehouse_id: string | null;
+          from_user_id: string | null;
+          to_user_id: string | null;
+          related_request_id: string | null;
+          status_before:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired'
+            | null;
+          status_after:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired';
+          notes: string | null;
+          performed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          asset_id: string;
+          movement_type:
+            | 'acquired'
+            | 'checkout'
+            | 'checkin'
+            | 'transfer'
+            | 'maintenance_out'
+            | 'maintenance_in'
+            | 'marked_lost'
+            | 'retired';
+          from_warehouse_id?: string | null;
+          to_warehouse_id?: string | null;
+          from_user_id?: string | null;
+          to_user_id?: string | null;
+          related_request_id?: string | null;
+          status_before?:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired'
+            | null;
+          status_after:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired';
+          notes?: string | null;
+          performed_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['asset_movements']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'asset_movements_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_asset_id_fkey';
+            columns: ['asset_id'];
+            isOneToOne: false;
+            referencedRelation: 'assets';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_from_warehouse_id_fkey';
+            columns: ['from_warehouse_id'];
+            isOneToOne: false;
+            referencedRelation: 'warehouses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_to_warehouse_id_fkey';
+            columns: ['to_warehouse_id'];
+            isOneToOne: false;
+            referencedRelation: 'warehouses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_from_user_id_fkey';
+            columns: ['from_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_to_user_id_fkey';
+            columns: ['to_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_related_request_id_fkey';
+            columns: ['related_request_id'];
+            isOneToOne: false;
+            referencedRelation: 'asset_requests';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'asset_movements_performed_by_fkey';
+            columns: ['performed_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -936,6 +1371,32 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string;
       };
+      register_asset_movement: {
+        Args: {
+          p_asset_id: string;
+          p_movement_type:
+            | 'acquired'
+            | 'checkout'
+            | 'checkin'
+            | 'transfer'
+            | 'maintenance_out'
+            | 'maintenance_in'
+            | 'marked_lost'
+            | 'retired';
+          p_new_status:
+            | 'available'
+            | 'checked_out'
+            | 'in_maintenance'
+            | 'lost'
+            | 'retired';
+          p_to_warehouse_id?: string;
+          p_to_user_id?: string;
+          p_related_request_id?: string;
+          p_notes?: string;
+          p_performed_by?: string;
+        };
+        Returns: string;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
@@ -963,6 +1424,17 @@ export type QuoteItem = Database['public']['Tables']['quote_items']['Row'];
 export type QuoteAdjustment = Database['public']['Tables']['quote_adjustments']['Row'];
 export type QuoteAdjustmentType = Database['public']['Tables']['quote_adjustments']['Row']['adjustment_type'];
 export type QuoteTax = Database['public']['Tables']['quote_taxes']['Row'];
+
+export type Warehouse = Database['public']['Tables']['warehouses']['Row'];
+export type WarehouseType = Database['public']['Tables']['warehouses']['Row']['type'];
+export type Asset = Database['public']['Tables']['assets']['Row'];
+export type AssetCategory = Database['public']['Tables']['assets']['Row']['category'];
+export type AssetStatus = Database['public']['Tables']['assets']['Row']['status'];
+export type AssetRequest = Database['public']['Tables']['asset_requests']['Row'];
+export type AssetRequestStatus = Database['public']['Tables']['asset_requests']['Row']['status'];
+export type AssetRequestItem = Database['public']['Tables']['asset_request_items']['Row'];
+export type AssetMovement = Database['public']['Tables']['asset_movements']['Row'];
+export type AssetMovementType = Database['public']['Tables']['asset_movements']['Row']['movement_type'];
 
 // Tipos para las capas (campo jsonb 'layers')
 export type QuoteLayerKind =

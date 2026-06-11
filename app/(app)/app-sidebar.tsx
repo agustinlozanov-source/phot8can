@@ -72,6 +72,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
     label: 'Producción',
     items: [
       {
+        label: 'Inventario',
+        href: '/inventory',
+        icon: Package,
+        requiredPermission: 'inventory.view',
+      },
+      {
         label: 'Estrategias',
         href: '/strategies',
         icon: Sparkles,
