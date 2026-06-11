@@ -7,7 +7,8 @@ export default async function PublicQuotePage({
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = await params;
+  const { token: rawToken } = await params;
+  const token = decodeURIComponent(rawToken);
 
   const debug: Record<string, unknown> = {
     token_recibido: token,
