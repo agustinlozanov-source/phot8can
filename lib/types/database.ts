@@ -619,6 +619,292 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // QUOTE_TEMPLATES (Módulo 03.B)
+      // ============================================================
+      quote_templates: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          description: string | null;
+          folio_prefix: string;
+          valid_days_default: number;
+          currency_default: string;
+          layers: Json;
+          primary_color: string | null;
+          is_default: boolean;
+          is_active: boolean;
+          archived_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          description?: string | null;
+          folio_prefix?: string;
+          valid_days_default?: number;
+          currency_default?: string;
+          layers?: Json;
+          primary_color?: string | null;
+          is_default?: boolean;
+          is_active?: boolean;
+          archived_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['quote_templates']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'quote_templates_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quote_templates_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // QUOTES (Módulo 03.B)
+      // ============================================================
+      quotes: {
+        Row: {
+          id: string;
+          organization_id: string;
+          folio: string;
+          title: string | null;
+          client_id: string;
+          contact_id: string | null;
+          template_id: string | null;
+          status: 'draft' | 'sent' | 'viewed' | 'approved' | 'rejected' | 'expired';
+          issue_date: string;
+          valid_until: string;
+          layers: Json;
+          message_to_client: string | null;
+          notes_internal: string | null;
+          currency: string;
+          subtotal: number;
+          discount_total: number;
+          tax_total: number;
+          total: number;
+          sent_at: string | null;
+          viewed_at: string | null;
+          decided_at: string | null;
+          rejection_reason: string | null;
+          public_share_token: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          folio: string;
+          title?: string | null;
+          client_id: string;
+          contact_id?: string | null;
+          template_id?: string | null;
+          status?: 'draft' | 'sent' | 'viewed' | 'approved' | 'rejected' | 'expired';
+          issue_date?: string;
+          valid_until: string;
+          layers?: Json;
+          message_to_client?: string | null;
+          notes_internal?: string | null;
+          currency?: string;
+          subtotal?: number;
+          discount_total?: number;
+          tax_total?: number;
+          total?: number;
+          sent_at?: string | null;
+          viewed_at?: string | null;
+          decided_at?: string | null;
+          rejection_reason?: string | null;
+          public_share_token?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['quotes']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'quotes_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quotes_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quotes_contact_id_fkey';
+            columns: ['contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'contacts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quotes_template_id_fkey';
+            columns: ['template_id'];
+            isOneToOne: false;
+            referencedRelation: 'quote_templates';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quotes_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // QUOTE_ITEMS (Módulo 03.B)
+      // ============================================================
+      quote_items: {
+        Row: {
+          id: string;
+          quote_id: string;
+          service_id: string | null;
+          service_type: 'atomic' | 'package' | 'addon';
+          name: string;
+          description: string | null;
+          unit: string;
+          quantity: number;
+          unit_price: number;
+          subtotal: number;
+          composition_snapshot: Json | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quote_id: string;
+          service_id?: string | null;
+          service_type: 'atomic' | 'package' | 'addon';
+          name: string;
+          description?: string | null;
+          unit?: string;
+          quantity?: number;
+          unit_price?: number;
+          subtotal?: number;
+          composition_snapshot?: Json | null;
+          position?: number;
+        };
+        Update: Partial<Database['public']['Tables']['quote_items']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'quote_items_quote_id_fkey';
+            columns: ['quote_id'];
+            isOneToOne: false;
+            referencedRelation: 'quotes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quote_items_service_id_fkey';
+            columns: ['service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // QUOTE_ADJUSTMENTS (Módulo 03.B)
+      // ============================================================
+      quote_adjustments: {
+        Row: {
+          id: string;
+          quote_id: string;
+          adjustment_type: 'discount_percent' | 'discount_amount' | 'bonus';
+          label: string;
+          description: string | null;
+          amount: number;
+          calculated_amount: number;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quote_id: string;
+          adjustment_type: 'discount_percent' | 'discount_amount' | 'bonus';
+          label: string;
+          description?: string | null;
+          amount?: number;
+          calculated_amount?: number;
+          position?: number;
+        };
+        Update: Partial<Database['public']['Tables']['quote_adjustments']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'quote_adjustments_quote_id_fkey';
+            columns: ['quote_id'];
+            isOneToOne: false;
+            referencedRelation: 'quotes';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // QUOTE_TAXES (Módulo 03.B)
+      // ============================================================
+      quote_taxes: {
+        Row: {
+          id: string;
+          quote_id: string;
+          tax_id: string | null;
+          name: string;
+          code: string | null;
+          percentage: number;
+          tax_amount: number;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quote_id: string;
+          tax_id?: string | null;
+          name: string;
+          code?: string | null;
+          percentage: number;
+          tax_amount?: number;
+          position?: number;
+        };
+        Update: Partial<Database['public']['Tables']['quote_taxes']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'quote_taxes_quote_id_fkey';
+            columns: ['quote_id'];
+            isOneToOne: false;
+            referencedRelation: 'quotes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'quote_taxes_tax_id_fkey';
+            columns: ['tax_id'];
+            isOneToOne: false;
+            referencedRelation: 'taxes';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -658,3 +944,30 @@ export type Service = Database['public']['Tables']['services']['Row'];
 export type ServiceType = Database['public']['Tables']['services']['Row']['service_type'];
 export type PackageComposition = Database['public']['Tables']['package_composition']['Row'];
 export type Tax = Database['public']['Tables']['taxes']['Row'];
+export type QuoteTemplate = Database['public']['Tables']['quote_templates']['Row'];
+export type Quote = Database['public']['Tables']['quotes']['Row'];
+export type QuoteStatus = Database['public']['Tables']['quotes']['Row']['status'];
+export type QuoteItem = Database['public']['Tables']['quote_items']['Row'];
+export type QuoteAdjustment = Database['public']['Tables']['quote_adjustments']['Row'];
+export type QuoteAdjustmentType = Database['public']['Tables']['quote_adjustments']['Row']['adjustment_type'];
+export type QuoteTax = Database['public']['Tables']['quote_taxes']['Row'];
+
+// Tipos para las capas (campo jsonb 'layers')
+export type QuoteLayerKind =
+  | 'cover'
+  | 'introduction'
+  | 'scope'
+  | 'deliverables'
+  | 'investment'
+  | 'terms'
+  | 'closing';
+
+export interface QuoteLayer {
+  kind: QuoteLayerKind;
+  order: number;
+  enabled: boolean;
+  title?: string;
+  subtitle?: string;
+  content_html?: string;
+  auto_generated?: boolean;
+}

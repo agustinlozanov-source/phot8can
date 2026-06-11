@@ -1,31 +1,28 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getActiveContext, hasPermission } from '@/lib/auth/context';
-import { Package, Layers, Plus } from 'lucide-react';
-import { ServicesList } from './services-list';
-import { NewServiceButton } from './new-service-button';
+import { Package, Percent, FileText, Plus } from 'lucide-react';
+import { TemplatesList } from './templates-list';
 
-export default async function ServicesPage() {
+export default async function TemplatesPage() {
   const ctx = await getActiveContext();
 
   if (ctx.mode === 'none' || ctx.mode === 'admin') {
     redirect('/login');
   }
 
-  if (!ctx.organization) {
-    redirect('/login');
-  }
+  if (!ctx.organization) redirect('/login');
 
-  // Cualquier miembro del equipo puede ver el catálogo
-  // Solo quien tenga config.services puede crearlo/editarlo
-  const canManage = hasPermission(ctx, 'config.services');
+  const canManage = hasPermission(ctx, 'quote.template_manage');
 
   const supabase = await createClient();
 
-  // Cargar todos los servicios de la organización
-  const { data: services, error } = await supabase
-    .from('services')
+  const { data: templates, error } = await supabase
+    .from('quote_templates')
     .select('*')
+    .order('is_default', { ascending: false })
+    .order('is_active', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -33,7 +30,7 @@ export default async function ServicesPage() {
       <div className="p-8 max-w-4xl">
         <div className="border border-destructive/30 bg-destructive/10 rounded-lg p-6">
           <div className="font-medium text-destructive mb-1">
-            Error al cargar el catálogo
+            Error al cargar plantillas
           </div>
           <div className="text-sm text-muted-foreground">{error.message}</div>
         </div>
@@ -41,26 +38,15 @@ export default async function ServicesPage() {
     );
   }
 
-  const allServices = services || [];
-
-  // Contar por tipo
-  const atomicCount = allServices.filter(
-    (s) => s.service_type === 'atomic' && !s.archived_at
-  ).length;
-  const packageCount = allServices.filter(
-    (s) => s.service_type === 'package' && !s.archived_at
-  ).length;
-  const addonCount = allServices.filter(
-    (s) => s.service_type === 'addon' && !s.archived_at
-  ).length;
-  const archivedCount = allServices.filter((s) => s.archived_at).length;
+  const all = templates || [];
+  const activeCount = all.filter((t) => t.is_active && !t.archived_at).length;
+  const archivedCount = all.filter((t) => t.archived_at).length;
+  const defaultTemplate = all.find((t) => t.is_default);
 
   return (
     <div className="p-8 max-w-7xl">
-      {/* Tabs de navegación del catálogo */}
-      <CatalogTabs current="services" />
+      <CatalogTabs current="templates" />
 
-      {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="text-photocan-amber font-mono text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -68,49 +54,47 @@ export default async function ServicesPage() {
             Catálogo
           </div>
           <h1 className="text-3xl font-semibold tracking-tight mb-1">
-            Servicios y paquetes
+            Plantillas de cotización
           </h1>
           <p className="text-muted-foreground text-sm">
-            Todo lo que tu agencia ofrece a sus clientes. {allServices.length}{' '}
-            elementos en el catálogo.
+            Estructura visual y contenido base para tus cotizaciones.{' '}
+            {activeCount} activas.
           </p>
         </div>
 
-        {canManage && <NewServiceButton />}
+        {canManage && (
+          <Link
+            href="/catalog/templates/new"
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-photocan-amber text-black text-sm font-medium hover:bg-photocan-amber-deep transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva plantilla
+          </Link>
+        )}
       </div>
 
-      {/* Stats compactas */}
-      <div className="grid grid-cols-4 gap-0 border border-border rounded-lg overflow-hidden bg-card mb-8">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-0 border border-border rounded-lg overflow-hidden bg-card mb-8">
         <div className="p-4 border-r border-border">
           <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px] uppercase tracking-wider mb-2">
-            <Package className="w-3.5 h-3.5" />
-            Servicios
+            <FileText className="w-3.5 h-3.5" />
+            Plantillas activas
           </div>
           <div className="text-2xl font-semibold tracking-tight">
-            {atomicCount}
+            {activeCount}
           </div>
         </div>
         <div className="p-4 border-r border-border">
-          <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px] uppercase tracking-wider mb-2">
-            <Layers className="w-3.5 h-3.5" />
-            Paquetes
+          <div className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider mb-2">
+            Plantilla por defecto
           </div>
-          <div className="text-2xl font-semibold tracking-tight text-photocan-amber">
-            {packageCount}
-          </div>
-        </div>
-        <div className="p-4 border-r border-border">
-          <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px] uppercase tracking-wider mb-2">
-            <Plus className="w-3.5 h-3.5" />
-            Addons
-          </div>
-          <div className="text-2xl font-semibold tracking-tight">
-            {addonCount}
+          <div className="text-sm font-medium truncate">
+            {defaultTemplate ? defaultTemplate.name : 'Sin asignar'}
           </div>
         </div>
         <div className="p-4">
           <div className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider mb-2">
-            Archivados
+            Archivadas
           </div>
           <div className="text-2xl font-semibold tracking-tight text-muted-foreground">
             {archivedCount}
@@ -118,24 +102,11 @@ export default async function ServicesPage() {
         </div>
       </div>
 
-      {/* Lista */}
-      {allServices.length > 0 ? (
-        <ServicesList services={allServices} canManage={canManage} />
-      ) : (
-        <div className="border border-dashed border-border rounded-lg p-12 text-center">
-          <Package className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-          <div className="font-medium mb-1">Aún no hay servicios</div>
-          <div className="text-sm text-muted-foreground mb-4">
-            Crea tu primer servicio para empezar a armar el catálogo.
-          </div>
-          {canManage && <NewServiceButton />}
-        </div>
-      )}
+      <TemplatesList templates={all} canManage={canManage} />
     </div>
   );
 }
 
-// Tabs de navegación del catálogo (servicios / impuestos / plantillas)
 function CatalogTabs({
   current,
 }: {
@@ -146,7 +117,7 @@ function CatalogTabs({
       <a
         href="/catalog/services"
         className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-          current === 'services'
+          (current as string) === 'services'
             ? 'border-photocan-amber text-foreground'
             : 'border-transparent text-muted-foreground hover:text-foreground'
         }`}
@@ -162,18 +133,18 @@ function CatalogTabs({
             : 'border-transparent text-muted-foreground hover:text-foreground'
         }`}
       >
-        <span className="text-xs font-mono">%</span>
+        <Percent className="w-3.5 h-3.5" />
         Impuestos
       </a>
       <a
         href="/catalog/templates"
         className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-          (current as string) === 'templates'
+          current === 'templates'
             ? 'border-photocan-amber text-foreground'
             : 'border-transparent text-muted-foreground hover:text-foreground'
         }`}
       >
-        <span className="text-xs font-mono">📄</span>
+        <FileText className="w-3.5 h-3.5" />
         Plantillas
       </a>
     </div>

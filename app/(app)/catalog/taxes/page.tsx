@@ -61,7 +61,11 @@ export default async function TaxesPage() {
   );
 }
 
-function CatalogTabs({ current }: { current: 'services' | 'taxes' }) {
+function CatalogTabs({
+  current,
+}: {
+  current: 'services' | 'taxes' | 'templates';
+}) {
   return (
     <div className="flex gap-1 border-b border-border mb-8">
       <a
@@ -85,6 +89,17 @@ function CatalogTabs({ current }: { current: 'services' | 'taxes' }) {
       >
         <Percent className="w-3.5 h-3.5" />
         Impuestos
+      </a>
+      <a
+        href="/catalog/templates"
+        className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+          (current as string) === 'templates'
+            ? 'border-photocan-amber text-foreground'
+            : 'border-transparent text-muted-foreground hover:text-foreground'
+        }`}
+      >
+        <span className="text-xs font-mono">📄</span>
+        Plantillas
       </a>
     </div>
   );
