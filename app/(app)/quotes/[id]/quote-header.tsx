@@ -15,6 +15,7 @@ import {
   Link2,
   Check,
   AlertCircle,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -236,6 +237,16 @@ export function QuoteHeader({
                 )}
               </Button>
             )}
+
+            {/* Descargar PDF (siempre disponible) */}
+            <a
+              href={`/api/quotes/${quote.id}/pdf`}
+              download
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-xs font-medium hover:bg-secondary transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              PDF
+            </a>
 
             {/* Acciones según estado */}
             {isDraft && canSend && (

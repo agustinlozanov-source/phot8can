@@ -1,4 +1,4 @@
-import { Package, Layers, Plus } from 'lucide-react';
+import { Package, Layers, Plus, Download } from 'lucide-react';
 import type {
   Quote,
   QuoteItem,
@@ -76,8 +76,20 @@ export function PublicQuoteView({
               {quote.organization?.name}
             </div>
           </div>
-          <div className="text-xs font-mono text-muted-foreground">
-            {quote.folio}
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/quotes/${quote.id}/pdf?token=${encodeURIComponent(
+                quote.public_share_token || ''
+              )}`}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-secondary transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              Descargar PDF
+            </a>
+            <div className="text-xs font-mono text-muted-foreground">
+              {quote.folio}
+            </div>
           </div>
         </div>
       </div>
