@@ -924,6 +924,18 @@ export interface Database {
         Args: { permission_code: string };
         Returns: boolean;
       };
+      generate_quote_folio: {
+        Args: { p_organization_id: string; p_prefix: string };
+        Returns: string;
+      };
+      recalculate_quote_totals: {
+        Args: { p_quote_id: string };
+        Returns: void;
+      };
+      generate_share_token: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
