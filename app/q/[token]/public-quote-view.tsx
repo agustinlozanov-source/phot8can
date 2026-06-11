@@ -265,29 +265,6 @@ function ContentLayer({
           Esta sección está vacía.
         </p>
       )}
-
-      <style>{`
-        .prose-quote p {
-          margin: 0 0 1em 0;
-        }
-        .prose-quote p:last-child {
-          margin-bottom: 0;
-        }
-        .prose-quote ul, .prose-quote ol {
-          margin: 0.5em 0 1em 0;
-          padding-left: 1.5em;
-        }
-        .prose-quote li {
-          margin-bottom: 0.4em;
-        }
-        .prose-quote strong {
-          font-weight: 600;
-          color: var(--foreground);
-        }
-        .prose-quote em {
-          font-style: italic;
-        }
-      `}</style>
     </section>
   );
 }
