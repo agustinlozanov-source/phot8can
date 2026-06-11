@@ -32,28 +32,20 @@ export default async function AppLayout({
 
   const roles = await getActiveRoles(ctx);
 
-  // Construir array de permisos para pasar al sidebar
-  // Super Admin tiene "todos" los permisos efectivos (sidebar muestra todo)
-  const permissions = ctx.isSuperAdmin
-    ? [
-        'client.view',
-        'client.create',
-        'client.edit',
-        'contact.manage',
-        'quote.view',
-        'contract.view',
-        'strategy.view',
-        'work_order.view',
-        'schedule.view',
-        'finance.view',
-        'config.users',
-        'config.organization',
-        'config.services',
-        'config.taxes',
-        'quote.template_manage',
-        'conversation.view',
-      ]
-    : Array.from(ctx.permissions);
+  // Para Super Admin: cargar TODOS los permisos del catálogo
+  // (evita mantener lista hardcodeada que se desactualiza)
+  let permissions: string[];
+
+  if (ctx.isSuperAdmin) {
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+    const { data: allPerms } = await supabase
+      .from('permissions')
+      .select('code');
+    permissions = (allPerms || []).map((p) => p.code);
+  } else {
+    permissions = Array.from(ctx.permissions);
+  }
 
   return (
     <div className="min-h-screen grid grid-cols-[240px_1fr] bg-background">
