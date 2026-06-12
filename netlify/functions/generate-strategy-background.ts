@@ -1,10 +1,13 @@
 import type { Handler } from '@netlify/functions';
-import { generateStrategyFromInterviewAction } from '../../lib/actions/strategies';
+import { generateStrategyCore } from '../../lib/strategy-generator';
 
 /**
  * Background function: corre hasta 15 minutos.
  * Disparada de manera asíncrona desde /api/interview/complete.
  * Netlify la trata como background porque el nombre termina en "-background".
+ *
+ * Importa directamente desde lib/strategy-generator (SIN dependencias Next.js)
+ * para evitar problemas de bundling con next/cache, next/headers, etc.
  */
 export const handler: Handler = async (event) => {
   try {
@@ -20,27 +23,26 @@ export const handler: Handler = async (event) => {
       `[generate-strategy-background] Starting for interview ${interview_id}`
     );
 
-    const result = await generateStrategyFromInterviewAction({
-      interview_id,
-    });
+    const result = await generateStrategyCore({ interview_id });
 
-    if (result?.error) {
-      console.error(
-        `[generate-strategy-background] Failed:`,
-        result.error
-      );
+    if (result.error) {
+      console.error(`[generate-strategy-background] Failed:`, result.error);
       return { statusCode: 500, body: result.error };
     }
 
+    if (!result.success) {
+      return { statusCode: 500, body: 'Unknown error' };
+    }
+
     console.log(
-      `[generate-strategy-background] Done. Strategy: ${result?.strategyId}, tokens: ${result?.tokensInput}/${result?.tokensOutput}, duration: ${result?.durationMs}ms`
+      `[generate-strategy-background] Done. Strategy: ${result.strategyId}, tokens: ${result.tokensInput}/${result.tokensOutput}, duration: ${result.durationMs}ms`
     );
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        strategyId: result?.strategyId,
+        strategyId: result.strategyId,
       }),
     };
   } catch (err) {
