@@ -133,7 +133,7 @@ export function VoiceInterview({
       await pc.setLocalDescription(offer);
 
       const sdpResponse = await fetch(
-        `https://api.openai.com/v1/realtime?model=${sessionData.model}`,
+        'https://api.openai.com/v1/realtime/calls',
         {
           method: 'POST',
           headers: {
