@@ -211,9 +211,36 @@ Genera la estrategia digital en 7 capas siguiendo el formato JSON estricto que s
     let parsedData;
     try {
       parsedData = JSON.parse(jsonText);
-    } catch {
-      console.error('[generateStrategyCore] JSON inválido de Claude:', jsonText);
-      throw new Error('Claude devolvió un JSON inválido');
+    } catch (firstErr) {
+      // Segundo intento: limpiar caracteres de control inválidos
+      // que Claude a veces incluye en strings JSON
+      try {
+        // Remover caracteres de control invisibles excepto \n, \r, \t
+        const cleaned = jsonText.replace(
+          /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+          ''
+        );
+        parsedData = JSON.parse(cleaned);
+        console.log('[generateStrategyCore] JSON parseado en segundo intento (limpieza de chars control)');
+      } catch (secondErr) {
+        // Si todavía falla, mostrar exactamente dónde
+        const errMsg = secondErr instanceof Error ? secondErr.message : String(secondErr);
+        console.error('[generateStrategyCore] JSON inválido de Claude:', textBlock.text);
+        console.error('[generateStrategyCore] Error de parseo:', errMsg);
+
+        // Extraer la posición del error si la tiene
+        const posMatch = errMsg.match(/position (\d+)/);
+        const errPos = posMatch ? parseInt(posMatch[1]) : -1;
+        if (errPos >= 0) {
+          const context = jsonText.slice(Math.max(0, errPos - 50), errPos + 50);
+          console.error(
+            `[generateStrategyCore] Contexto en posición ${errPos}:`,
+            JSON.stringify(context)
+          );
+        }
+
+        throw new Error(`Claude devolvió JSON inválido: ${errMsg}`);
+      }
     }
 
     // 7. Validar estructura con Zod
