@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   X,
   AlertCircle,
+  Mic,
+  Square,
 } from 'lucide-react';
 import type { InterviewTurn } from '@/lib/types/database';
 
@@ -44,6 +46,134 @@ export function InterviewChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // ─── Estado de dictado por voz ───
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // ─── Funciones de dictado ───
+  async function startRecording() {
+    setError(null);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.addEventListener('dataavailable', (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      });
+
+      mediaRecorder.addEventListener('stop', async () => {
+        // Liberar el micrófono
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
+        if (audioBlob.size === 0) {
+          setError('No se grabó audio. Intenta de nuevo.');
+          return;
+        }
+
+        await transcribeAudio(audioBlob);
+      });
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('[mic] Error:', err);
+      setError(
+        err instanceof Error && err.name === 'NotAllowedError'
+          ? 'Permiso de micrófono denegado'
+          : 'No se pudo activar el micrófono'
+      );
+      setIsRecording(false);
+    }
+  }
+
+  function stopRecording() {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== 'inactive'
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  }
+
+  async function transcribeAudio(audioBlob: Blob) {
+    setIsTranscribing(true);
+
+    try {
+      const formData = new FormData();
+      formData.set('token', token);
+      formData.set('audio', audioBlob, 'audio.webm');
+
+      const response = await fetch('/api/interview/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al transcribir');
+      }
+
+      // Agregar el texto transcrito al input actual (en lugar de reemplazar)
+      setInput((prev) => {
+        const separator = prev.trim().length > 0 ? ' ' : '';
+        return prev + separator + (data.text as string);
+      });
+
+      // Enfocar el textarea
+      textareaRef.current?.focus();
+    } catch (err) {
+      console.error('[transcribe] Error:', err);
+      setError(
+        err instanceof Error ? err.message : 'Error al transcribir audio'
+      );
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== 'inactive'
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   // Auto-scroll al final
   useEffect(() => {
@@ -370,19 +500,46 @@ export function InterviewChat({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isStreaming}
+              disabled={isStreaming || isTranscribing}
               placeholder={
-                isStreaming
-                  ? `${interviewerName} está escribiendo...`
-                  : 'Escribe tu respuesta...'
+                isTranscribing
+                  ? 'Transcribiendo audio...'
+                  : isRecording
+                    ? 'Grabando... habla cuando estés listo'
+                    : isStreaming
+                      ? `${interviewerName} está escribiendo...`
+                      : 'Escribe tu respuesta...'
               }
               rows={1}
-              className="w-full resize-none rounded-2xl border border-input bg-background pl-4 pr-14 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-photocan-amber disabled:opacity-50"
+              className="w-full resize-none rounded-2xl border border-input bg-background pl-4 pr-24 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-photocan-amber disabled:opacity-50"
               style={{ minHeight: '48px' }}
             />
+
+            {/* Botón mic */}
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isStreaming || isTranscribing}
+              className={`absolute bottom-2 w-9 h-9 rounded-full grid place-items-center transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                isRecording
+                  ? 'bg-destructive text-destructive-foreground animate-pulse'
+                  : 'bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+              }`}
+              style={{ right: '3rem' }}
+              title={isRecording ? 'Detener grabación' : 'Dictar por voz'}
+            >
+              {isTranscribing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isRecording ? (
+                <Square className="w-3 h-3 fill-current" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Botón enviar */}
             <button
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() || isStreaming}
+              disabled={!input.trim() || isStreaming || isRecording || isTranscribing}
               className="absolute right-2 bottom-2 w-9 h-9 rounded-full grid place-items-center disabled:opacity-30 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
               style={{ background: orgColor, color: '#000' }}
             >
