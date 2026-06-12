@@ -1340,6 +1340,313 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // STRATEGY_PROMPTS (Módulo Estrategia IA)
+      // ============================================================
+      strategy_prompts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          interview_system_prompt: string;
+          strategy_generation_prompt: string;
+          layer_regeneration_prompt: string;
+          interviewer_name: string | null;
+          interviewer_personality: string | null;
+          default_language: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          interview_system_prompt: string;
+          strategy_generation_prompt: string;
+          layer_regeneration_prompt: string;
+          interviewer_name?: string | null;
+          interviewer_personality?: string | null;
+          default_language?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['strategy_prompts']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'strategy_prompts_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: true;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'strategy_prompts_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // INTERVIEWS (Módulo Estrategia IA)
+      // ============================================================
+      interviews: {
+        Row: {
+          id: string;
+          organization_id: string;
+          client_id: string;
+          contact_id: string | null;
+          mode: 'voice' | 'text';
+          status:
+            | 'pending'
+            | 'in_progress'
+            | 'completed'
+            | 'processing'
+            | 'failed'
+            | 'cancelled';
+          public_access_token: string;
+          invited_at: string;
+          started_at: string | null;
+          completed_at: string | null;
+          duration_seconds: number | null;
+          transcript: Json;
+          conversation_summary: string | null;
+          topics_covered: Json | null;
+          system_prompt_snapshot: string | null;
+          error_message: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          client_id: string;
+          contact_id?: string | null;
+          mode: 'voice' | 'text';
+          status?:
+            | 'pending'
+            | 'in_progress'
+            | 'completed'
+            | 'processing'
+            | 'failed'
+            | 'cancelled';
+          public_access_token: string;
+          invited_at?: string;
+          started_at?: string | null;
+          completed_at?: string | null;
+          duration_seconds?: number | null;
+          transcript?: Json;
+          conversation_summary?: string | null;
+          topics_covered?: Json | null;
+          system_prompt_snapshot?: string | null;
+          error_message?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['interviews']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'interviews_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'interviews_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'interviews_contact_id_fkey';
+            columns: ['contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'contacts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'interviews_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // STRATEGIES (Módulo Estrategia IA)
+      // ============================================================
+      strategies: {
+        Row: {
+          id: string;
+          organization_id: string;
+          client_id: string;
+          interview_id: string | null;
+          version: number;
+          parent_strategy_id: string | null;
+          title: string;
+          status:
+            | 'draft'
+            | 'review'
+            | 'sent'
+            | 'viewed'
+            | 'approved'
+            | 'rejected'
+            | 'archived';
+          public_access_token: string | null;
+          ai_model_used: string | null;
+          generation_tokens_input: number | null;
+          generation_tokens_output: number | null;
+          generated_at: string;
+          sent_to_client_at: string | null;
+          viewed_by_client_at: string | null;
+          decided_at: string | null;
+          approved_by_name: string | null;
+          rejection_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          client_id: string;
+          interview_id?: string | null;
+          version?: number;
+          parent_strategy_id?: string | null;
+          title: string;
+          status?:
+            | 'draft'
+            | 'review'
+            | 'sent'
+            | 'viewed'
+            | 'approved'
+            | 'rejected'
+            | 'archived';
+          public_access_token?: string | null;
+          ai_model_used?: string | null;
+          generation_tokens_input?: number | null;
+          generation_tokens_output?: number | null;
+          generated_at?: string;
+          sent_to_client_at?: string | null;
+          viewed_by_client_at?: string | null;
+          decided_at?: string | null;
+          approved_by_name?: string | null;
+          rejection_reason?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['strategies']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'strategies_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'strategies_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'strategies_interview_id_fkey';
+            columns: ['interview_id'];
+            isOneToOne: false;
+            referencedRelation: 'interviews';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'strategies_parent_strategy_id_fkey';
+            columns: ['parent_strategy_id'];
+            isOneToOne: false;
+            referencedRelation: 'strategies';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'strategies_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // STRATEGY_LAYERS (Módulo Estrategia IA)
+      // ============================================================
+      strategy_layers: {
+        Row: {
+          id: string;
+          strategy_id: string;
+          kind:
+            | 'insights'
+            | 'positioning'
+            | 'audience'
+            | 'messages'
+            | 'pillars'
+            | 'tone'
+            | 'action_plan';
+          layer_order: number;
+          title: string;
+          content_html: string;
+          ai_draft_content: string;
+          status: 'ai_draft' | 'edited' | 'approved';
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          regeneration_feedback: string | null;
+          regenerated_at: string | null;
+          regeneration_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          strategy_id: string;
+          kind:
+            | 'insights'
+            | 'positioning'
+            | 'audience'
+            | 'messages'
+            | 'pillars'
+            | 'tone'
+            | 'action_plan';
+          layer_order: number;
+          title: string;
+          content_html: string;
+          ai_draft_content: string;
+          status?: 'ai_draft' | 'edited' | 'approved';
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          regeneration_feedback?: string | null;
+          regenerated_at?: string | null;
+          regeneration_count?: number;
+        };
+        Update: Partial<Database['public']['Tables']['strategy_layers']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'strategy_layers_strategy_id_fkey';
+            columns: ['strategy_id'];
+            isOneToOne: false;
+            referencedRelation: 'strategies';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'strategy_layers_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -1397,6 +1704,12 @@ export interface Database {
         };
         Returns: string;
       };
+      mark_strategy_as_viewed: {
+        Args: {
+          p_token: string;
+        };
+        Returns: void;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
@@ -1435,6 +1748,27 @@ export type AssetRequestStatus = Database['public']['Tables']['asset_requests'][
 export type AssetRequestItem = Database['public']['Tables']['asset_request_items']['Row'];
 export type AssetMovement = Database['public']['Tables']['asset_movements']['Row'];
 export type AssetMovementType = Database['public']['Tables']['asset_movements']['Row']['movement_type'];
+
+// Estrategia IA
+export type StrategyPrompts = Database['public']['Tables']['strategy_prompts']['Row'];
+
+export type Interview = Database['public']['Tables']['interviews']['Row'];
+export type InterviewMode = Database['public']['Tables']['interviews']['Row']['mode'];
+export type InterviewStatus = Database['public']['Tables']['interviews']['Row']['status'];
+
+export type Strategy = Database['public']['Tables']['strategies']['Row'];
+export type StrategyStatus = Database['public']['Tables']['strategies']['Row']['status'];
+
+export type StrategyLayer = Database['public']['Tables']['strategy_layers']['Row'];
+export type StrategyLayerKind = Database['public']['Tables']['strategy_layers']['Row']['kind'];
+export type StrategyLayerStatus = Database['public']['Tables']['strategy_layers']['Row']['status'];
+
+// Tipo de un turno en el transcript
+export type InterviewTurn = {
+  role: 'assistant' | 'user';
+  content: string;
+  at: string; // ISO timestamp
+};
 
 // Tipos para las capas (campo jsonb 'layers')
 export type QuoteLayerKind =
