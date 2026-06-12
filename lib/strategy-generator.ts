@@ -8,6 +8,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { z } from 'zod';
 import type { Database, InterviewTurn } from './types/database';
 
@@ -61,6 +62,7 @@ function createServiceClientDirect() {
         params: {
           eventsPerSecond: 0,
         },
+        transport: ws as unknown as typeof WebSocket,
       },
       global: {
         headers: {
