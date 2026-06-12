@@ -103,9 +103,19 @@ export async function POST(request: NextRequest) {
 
     if (!sessionResponse.ok) {
       const errorText = await sessionResponse.text();
-      console.error('[/api/interview/session] OpenAI error:', errorText);
+      console.error('[/api/interview/session] OpenAI error:', {
+        status: sessionResponse.status,
+        statusText: sessionResponse.statusText,
+        body: errorText,
+      });
       return NextResponse.json(
-        { error: 'No se pudo crear sesión de voz. Intenta de nuevo.' },
+        { 
+          error: 'OpenAI rechazó la sesión',
+          debug: {
+            status: sessionResponse.status,
+            openai_response: errorText,
+          },
+        },
         { status: 500 }
       );
     }
@@ -131,10 +141,18 @@ export async function POST(request: NextRequest) {
       voice: VOICE,
     });
   } catch (err) {
-    console.error('[/api/interview/session] Error:', err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorStack = err instanceof Error ? err.stack : undefined;
+    console.error('[/api/interview/session] Catch error:', {
+      message: errorMessage,
+      stack: errorStack,
+    });
     return NextResponse.json(
       {
-        error: err instanceof Error ? err.message : 'Error inesperado',
+        error: errorMessage,
+        debug: {
+          stack: errorStack,
+        },
       },
       { status: 500 }
     );
