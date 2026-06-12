@@ -16,6 +16,6 @@ export const config = {
      * - api/interview/* (public interview endpoints)
      * - public files (images, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|\\.netlify|api/interview|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|\\.netlify|api/interview|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm|ogg|mov|woff|woff2|ttf|ico)$).*)',
   ],
 };
