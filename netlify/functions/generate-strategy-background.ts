@@ -10,6 +10,13 @@ import { generateStrategyCore } from '../../lib/strategy-generator';
  * para evitar problemas de bundling con next/cache, next/headers, etc.
  */
 export const handler: Handler = async (event) => {
+  console.log('[bg] Handler entered. ENV check:', {
+    has_url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    has_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    has_anthropic: !!process.env.ANTHROPIC_API_KEY,
+    body_length: event.body?.length || 0,
+  });
+
   try {
     const body = JSON.parse(event.body || '{}');
     const { interview_id } = body as { interview_id: string };
