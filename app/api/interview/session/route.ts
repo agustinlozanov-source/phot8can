@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     const interviewerName = prompts?.interviewer_name || 'Lía';
 
-    // 4. Construir el system prompt completo (snapshot + contexto del cliente)
+    // 4. Construir el system prompt completo
     const baseSystemPrompt = interview.system_prompt_snapshot || '';
     const contextLine = `\n\n## Información del cliente con el que vas a hablar\nNombre del negocio: ${client?.name || 'su negocio'}${
       client?.legal_name ? ` (${client.legal_name})` : ''
@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
 
     const fullSystemPrompt = baseSystemPrompt + contextLine;
 
-    // 5. Pedir token efímero a OpenAI
+    // 5. Pedir token efímero a OpenAI (NUEVO endpoint GA)
     const sessionResponse = await fetch(
-      'https://api.openai.com/v1/realtime/sessions',
+      'https://api.openai.com/v1/realtime/client_secrets',
       {
         method: 'POST',
         headers: {
@@ -82,21 +82,27 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: REALTIME_MODEL,
-          voice: VOICE,
-          instructions: fullSystemPrompt,
-          modalities: ['audio', 'text'],
-          input_audio_transcription: {
-            model: 'whisper-1',
+          session: {
+            type: 'realtime',
+            model: REALTIME_MODEL,
+            instructions: fullSystemPrompt,
+            audio: {
+              output: {
+                voice: VOICE,
+              },
+              input: {
+                transcription: {
+                  model: 'whisper-1',
+                },
+                turn_detection: {
+                  type: 'server_vad',
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 700,
+                },
+              },
+            },
           },
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 700,
-          },
-          temperature: 0.8,
-          max_response_output_tokens: 4096,
         }),
       }
     );
@@ -105,11 +111,10 @@ export async function POST(request: NextRequest) {
       const errorText = await sessionResponse.text();
       console.error('[/api/interview/session] OpenAI error:', {
         status: sessionResponse.status,
-        statusText: sessionResponse.statusText,
         body: errorText,
       });
       return NextResponse.json(
-        { 
+        {
           error: 'OpenAI rechazó la sesión',
           debug: {
             status: sessionResponse.status,
@@ -134,25 +139,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Devolver el token efímero al cliente
+    // NOTA: en la nueva API el token viene en sessionData.value (no en client_secret.value)
     return NextResponse.json({
       success: true,
-      client_secret: sessionData.client_secret,
+      client_secret: {
+        value: sessionData.value,
+        expires_at: sessionData.expires_at,
+      },
       model: REALTIME_MODEL,
       voice: VOICE,
     });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorStack = err instanceof Error ? err.stack : undefined;
-    console.error('[/api/interview/session] Catch error:', {
-      message: errorMessage,
-      stack: errorStack,
-    });
+    console.error('[/api/interview/session] Catch error:', errorMessage);
     return NextResponse.json(
       {
         error: errorMessage,
-        debug: {
-          stack: errorStack,
-        },
       },
       { status: 500 }
     );
