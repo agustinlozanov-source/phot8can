@@ -7,7 +7,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import type { Database, InterviewTurn } from './types/database';
 
@@ -48,15 +48,24 @@ const claudeStrategyResponseSchema = z.object({
 // ============================================================
 
 function createServiceClientDirect() {
-  return createServerClient<Database>(
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return [];
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 0,
         },
-        setAll() {},
+      },
+      global: {
+        headers: {
+          'x-application-name': 'photocan-bg-function',
+        },
       },
     }
   );
