@@ -4,7 +4,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-[3fr_1fr]">
       {/* Lado izquierdo — Video 3/4 */}
-      <div className="hidden lg:block relative bg-black overflow-hidden">
+      <div className="hidden lg:block relative bg-black overflow-hidden min-h-screen">
         <video
           src="/videos/login.mp4"
           autoPlay
