@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase/server';
 import { InterviewChat } from './interview-chat';
+import { VoiceInterview } from './voice-interview';
 import type { InterviewTurn } from '@/lib/types/database';
 
 export default async function InterviewPage({
@@ -21,11 +22,6 @@ export default async function InterviewPage({
     .maybeSingle();
 
   if (!interview) notFound();
-
-  // Solo permitimos modo texto en este bloque (voz será otro bloque)
-  if (interview.mode !== 'text') {
-    notFound();
-  }
 
   if (interview.status === 'cancelled') {
     return <InterviewClosed reason="cancelled" />;
@@ -60,18 +56,22 @@ export default async function InterviewPage({
 
   const transcript = (interview.transcript as InterviewTurn[]) || [];
 
-  return (
-    <InterviewChat
-      token={token}
-      interviewId={interview.id}
-      initialTranscript={transcript}
-      clientName={clientResult.data?.name || 'tu negocio'}
-      interviewerName={promptsResult.data?.interviewer_name || 'Lía'}
-      orgName={orgResult.data?.name || 'la agencia'}
-      orgColor={orgResult.data?.primary_color || '#E89A1F'}
-      isResuming={transcript.length > 0}
-    />
-  );
+  const sharedProps = {
+    token,
+    interviewId: interview.id,
+    initialTranscript: transcript,
+    clientName: clientResult.data?.name || 'tu negocio',
+    interviewerName: promptsResult.data?.interviewer_name || 'Lía',
+    orgName: orgResult.data?.name || 'la agencia',
+    orgColor: orgResult.data?.primary_color || '#E89A1F',
+    isResuming: transcript.length > 0,
+  };
+
+  if (interview.mode === 'voice') {
+    return <VoiceInterview {...sharedProps} />;
+  }
+
+  return <InterviewChat {...sharedProps} />;
 }
 
 // ============================================================
