@@ -78,11 +78,10 @@ const navSections: { label: string; items: NavItem[] }[] = [
         requiredPermission: 'inventory.view',
       },
       {
-        label: 'Estrategias',
-        href: '/strategies',
+        label: 'Estrategia',
+        href: '/strategy',
         icon: Sparkles,
         requiredPermission: 'strategy.view',
-        comingSoon: true,
       },
       {
         label: 'Órdenes de trabajo',
