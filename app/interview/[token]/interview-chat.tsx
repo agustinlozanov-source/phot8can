@@ -386,8 +386,8 @@ export function InterviewChat({
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <div className="border-b border-border bg-card/50 flex-shrink-0">
-        <div className="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div
               className="w-8 h-8 rounded-full grid place-items-center flex-shrink-0"
               style={{ background: `${orgColor}15`, border: `1px solid ${orgColor}30` }}
@@ -405,9 +405,15 @@ export function InterviewChat({
           <button
             onClick={() => setShowFinishConfirm(true)}
             disabled={messages.length < 4 || isStreaming}
-            className="text-xs font-mono text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              borderColor: messages.length >= 4 ? orgColor : undefined,
+              color: messages.length >= 4 ? orgColor : undefined,
+            }}
           >
-            Terminar entrevista
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Terminar entrevista</span>
+            <span className="inline sm:hidden">Terminar</span>
           </button>
         </div>
       </div>
