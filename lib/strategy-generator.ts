@@ -197,59 +197,79 @@ Genera la estrategia digital en 7 capas siguiendo el formato JSON estricto que s
       model: STRATEGY_MODEL,
       max_tokens: MAX_GENERATION_TOKENS,
       system: systemPrompt,
+      tools: [
+        {
+          name: 'save_strategy',
+          description:
+            'Guarda la estrategia digital generada en las 7 capas requeridas',
+          input_schema: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'Título de la estrategia, ej: "Estrategia digital — Nombre del Negocio"',
+              },
+              layers: {
+                type: 'array',
+                description: 'Las 7 capas estratégicas en el orden correcto',
+                items: {
+                  type: 'object',
+                  properties: {
+                    kind: {
+                      type: 'string',
+                      enum: [
+                        'insights',
+                        'positioning',
+                        'audience',
+                        'messages',
+                        'pillars',
+                        'tone',
+                        'action_plan',
+                      ],
+                      description: 'Tipo de capa',
+                    },
+                    title: {
+                      type: 'string',
+                      description: 'Título de la capa',
+                    },
+                    content_html: {
+                      type: 'string',
+                      description:
+                        'Contenido de la capa en HTML básico (p, ul, li, strong, em)',
+                    },
+                  },
+                  required: ['kind', 'title', 'content_html'],
+                },
+              },
+            },
+            required: ['title', 'layers'],
+          },
+        },
+      ],
+      tool_choice: { type: 'tool', name: 'save_strategy' },
       messages: [{ role: 'user', content: userMessage }],
     });
     const durationMs = Date.now() - startTime;
 
-    // 6. Extraer y parsear JSON
-    const textBlock = response.content.find((b) => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      throw new Error('Claude no devolvió contenido de texto');
+    // 6. Extraer la respuesta del tool use (Claude generó datos estructurados nativos)
+    const toolUseBlock = response.content.find((b) => b.type === 'tool_use');
+    if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
+      throw new Error('Claude no usó la herramienta save_strategy');
     }
 
-    const jsonText = extractJSON(textBlock.text);
-    let parsedData;
-    try {
-      parsedData = JSON.parse(jsonText);
-    } catch (firstErr) {
-      // Segundo intento: limpiar caracteres de control inválidos
-      // que Claude a veces incluye en strings JSON
-      try {
-        // Remover caracteres de control invisibles excepto \n, \r, \t
-        const cleaned = jsonText.replace(
-          /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
-          ''
-        );
-        parsedData = JSON.parse(cleaned);
-        console.log('[generateStrategyCore] JSON parseado en segundo intento (limpieza de chars control)');
-      } catch (secondErr) {
-        // Si todavía falla, mostrar exactamente dónde
-        const errMsg = secondErr instanceof Error ? secondErr.message : String(secondErr);
-        console.error('[generateStrategyCore] JSON inválido de Claude:', textBlock.text);
-        console.error('[generateStrategyCore] Error de parseo:', errMsg);
+    const parsedData = toolUseBlock.input as {
+      title: string;
+      layers: Array<{
+        kind: string;
+        title: string;
+        content_html: string;
+      }>;
+    };
 
-        // Extraer la posición del error si la tiene
-        const posMatch = errMsg.match(/position (\d+)/);
-        const errPos = posMatch ? parseInt(posMatch[1]) : -1;
-        if (errPos >= 0) {
-          const context = jsonText.slice(Math.max(0, errPos - 50), errPos + 50);
-          console.error(
-            `[generateStrategyCore] Contexto en posición ${errPos}:`,
-            JSON.stringify(context)
-          );
-        }
-
-        throw new Error(`Claude devolvió JSON inválido: ${errMsg}`);
-      }
-    }
-
-    // 7. Validar estructura con Zod
+    // 7. Validar estructura con Zod (defensa adicional)
     const validation = claudeStrategyResponseSchema.safeParse(parsedData);
     if (!validation.success) {
-      console.error(
-        '[generateStrategyCore] Schema inválido:',
-        validation.error
-      );
+      console.error('Tool use de Claude no cumple schema:', validation.error);
       throw new Error(
         `Formato inválido: ${validation.error.errors[0].message}`
       );
