@@ -260,9 +260,9 @@ export async function createScheduleAction(payload: {
   });
 
   // 8. Revalidar rutas relevantes
-  revalidatePath('/schedule');
+  revalidatePath('/schedules');
   revalidatePath(`/subscriptions/${subscription.id}`);
-  revalidatePath(`/schedule/${newSchedule.id}`);
+  revalidatePath(`/schedules/${newSchedule.id}`);
 
   return { success: true, scheduleId: newSchedule.id };
 }
@@ -495,7 +495,7 @@ Genera la nueva versión del brief usando la herramienta regenerate_item.`;
       throw new Error(`Error guardando: ${error.message}`);
     }
 
-    revalidatePath(`/schedule/${schedule.id}`);
+    revalidatePath(`/schedules/${schedule.id}`);
 
     return {
       success: true,
@@ -545,7 +545,7 @@ export async function approveScheduleItemAction(itemId: string) {
 
   if (error) return { error: `Error al aprobar: ${error.message}` };
 
-  revalidatePath(`/schedule/${item.schedule_id}`);
+  revalidatePath(`/schedules/${item.schedule_id}`);
   return { success: true };
 }
 
@@ -590,7 +590,7 @@ export async function rejectScheduleItemAction(payload: {
 
   if (error) return { error: `Error al rechazar: ${error.message}` };
 
-  revalidatePath(`/schedule/${item.schedule_id}`);
+  revalidatePath(`/schedules/${item.schedule_id}`);
   return { success: true };
 }
 
@@ -628,7 +628,7 @@ export async function unapproveScheduleItemAction(itemId: string) {
 
   if (error) return { error: `Error: ${error.message}` };
 
-  revalidatePath(`/schedule/${item.schedule_id}`);
+  revalidatePath(`/schedules/${item.schedule_id}`);
   return { success: true };
 }
 
@@ -687,7 +687,7 @@ export async function updateScheduleItemAction(payload: {
 
   if (error) return { error: `Error al guardar: ${error.message}` };
 
-  revalidatePath(`/schedule/${item.schedule_id}`);
+  revalidatePath(`/schedules/${item.schedule_id}`);
   return { success: true };
 }
 
@@ -721,7 +721,7 @@ export async function deleteScheduleItemAction(itemId: string) {
 
   if (error) return { error: `Error al borrar: ${error.message}` };
 
-  revalidatePath(`/schedule/${item.schedule_id}`);
+  revalidatePath(`/schedules/${item.schedule_id}`);
   return { success: true };
 }
 
@@ -774,8 +774,8 @@ export async function retryFailedScheduleAction(scheduleId: string) {
     console.error('[retryFailedSchedule] Error disparando background:', err);
   });
 
-  revalidatePath('/schedule');
-  revalidatePath(`/schedule/${schedule.id}`);
+  revalidatePath('/schedules');
+  revalidatePath(`/schedules/${schedule.id}`);
   return { success: true };
 }
 
@@ -818,6 +818,6 @@ export async function deleteScheduleAction(scheduleId: string) {
     }`
   );
 
-  revalidatePath('/schedule');
+  revalidatePath('/schedules');
   return { success: true };
 }
