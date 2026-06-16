@@ -1896,6 +1896,296 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // CLIENT_SUBSCRIPTIONS (Módulo 05 Suscripciones)
+      // ============================================================
+      client_subscriptions: {
+        Row: {
+          id: string;
+          organization_id: string;
+          client_id: string;
+          source_contract_id: string;
+          name: string;
+          status:
+            | 'pending_start'
+            | 'active'
+            | 'paused'
+            | 'cancelled';
+          billing_cycle: string;
+          price_per_period: number;
+          currency: string;
+          start_date: string | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          next_renewal_date: string | null;
+          total_periods_billed: number;
+          paused_at: string | null;
+          pause_reason: string | null;
+          cancelled_at: string | null;
+          cancellation_reason: string | null;
+          cancelled_by: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          client_id: string;
+          source_contract_id: string;
+          name: string;
+          status?:
+            | 'pending_start'
+            | 'active'
+            | 'paused'
+            | 'cancelled';
+          billing_cycle: string;
+          price_per_period: number;
+          currency?: string;
+          start_date?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          next_renewal_date?: string | null;
+          total_periods_billed?: number;
+          paused_at?: string | null;
+          pause_reason?: string | null;
+          cancelled_at?: string | null;
+          cancellation_reason?: string | null;
+          cancelled_by?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['client_subscriptions']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'client_subscriptions_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_subscriptions_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_subscriptions_source_contract_id_fkey';
+            columns: ['source_contract_id'];
+            isOneToOne: false;
+            referencedRelation: 'contracts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_subscriptions_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_subscriptions_cancelled_by_fkey';
+            columns: ['cancelled_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // SUBSCRIPTION_DELIVERABLES
+      // ============================================================
+      subscription_deliverables: {
+        Row: {
+          id: string;
+          subscription_id: string;
+          service_id: string | null;
+          service_name: string;
+          service_type: string | null;
+          unit: string | null;
+          quantity_per_period: number;
+          notes: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          subscription_id: string;
+          service_id?: string | null;
+          service_name: string;
+          service_type?: string | null;
+          unit?: string | null;
+          quantity_per_period: number;
+          notes?: string | null;
+          position?: number;
+        };
+        Update: Partial<Database['public']['Tables']['subscription_deliverables']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'subscription_deliverables_subscription_id_fkey';
+            columns: ['subscription_id'];
+            isOneToOne: false;
+            referencedRelation: 'client_subscriptions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'subscription_deliverables_service_id_fkey';
+            columns: ['service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // SUBSCRIPTION_PERIODS
+      // ============================================================
+      subscription_periods: {
+        Row: {
+          id: string;
+          subscription_id: string;
+          period_number: number;
+          start_date: string;
+          end_date: string;
+          status: 'active' | 'completed' | 'skipped';
+          notes: string | null;
+          started_by: string | null;
+          completed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          subscription_id: string;
+          period_number: number;
+          start_date: string;
+          end_date: string;
+          status?: 'active' | 'completed' | 'skipped';
+          notes?: string | null;
+          started_by?: string | null;
+          completed_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['subscription_periods']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'subscription_periods_subscription_id_fkey';
+            columns: ['subscription_id'];
+            isOneToOne: false;
+            referencedRelation: 'client_subscriptions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'subscription_periods_started_by_fkey';
+            columns: ['started_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // PERIOD_DELIVERABLES
+      // ============================================================
+      period_deliverables: {
+        Row: {
+          id: string;
+          period_id: string;
+          template_deliverable_id: string | null;
+          service_id: string | null;
+          service_name: string;
+          service_type: string | null;
+          unit: string | null;
+          quantity_planned: number;
+          adjustment_reason: string | null;
+          quantity_delivered: number;
+          notes: string | null;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          period_id: string;
+          template_deliverable_id?: string | null;
+          service_id?: string | null;
+          service_name: string;
+          service_type?: string | null;
+          unit?: string | null;
+          quantity_planned: number;
+          adjustment_reason?: string | null;
+          quantity_delivered?: number;
+          notes?: string | null;
+          position?: number;
+        };
+        Update: Partial<Database['public']['Tables']['period_deliverables']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'period_deliverables_period_id_fkey';
+            columns: ['period_id'];
+            isOneToOne: false;
+            referencedRelation: 'subscription_periods';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'period_deliverables_template_deliverable_id_fkey';
+            columns: ['template_deliverable_id'];
+            isOneToOne: false;
+            referencedRelation: 'subscription_deliverables';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'period_deliverables_service_id_fkey';
+            columns: ['service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // PERIOD_DELIVERABLE_ADJUSTMENTS
+      // ============================================================
+      period_deliverable_adjustments: {
+        Row: {
+          id: string;
+          period_deliverable_id: string;
+          previous_quantity: number;
+          new_quantity: number;
+          reason: string;
+          adjusted_by: string | null;
+          adjusted_at: string;
+        };
+        Insert: {
+          id?: string;
+          period_deliverable_id: string;
+          previous_quantity: number;
+          new_quantity: number;
+          reason: string;
+          adjusted_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['period_deliverable_adjustments']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'period_deliverable_adjustments_period_deliverable_id_fkey';
+            columns: ['period_deliverable_id'];
+            isOneToOne: false;
+            referencedRelation: 'period_deliverables';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'period_deliverable_adjustments_adjusted_by_fkey';
+            columns: ['adjusted_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -1965,6 +2255,13 @@ export interface Database {
         };
         Returns: string;
       };
+      calculate_period_end_date: {
+        Args: {
+          p_start_date: string;
+          p_billing_cycle: string;
+        };
+        Returns: string;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
@@ -2025,6 +2322,19 @@ export type Contract = Database['public']['Tables']['contracts']['Row'];
 export type ContractStatus = Database['public']['Tables']['contracts']['Row']['status'];
 
 export type ContractSignature = Database['public']['Tables']['contract_signatures']['Row'];
+
+// Suscripciones
+export type ClientSubscription = Database['public']['Tables']['client_subscriptions']['Row'];
+export type SubscriptionStatus = Database['public']['Tables']['client_subscriptions']['Row']['status'];
+
+export type SubscriptionDeliverable = Database['public']['Tables']['subscription_deliverables']['Row'];
+
+export type SubscriptionPeriod = Database['public']['Tables']['subscription_periods']['Row'];
+export type SubscriptionPeriodStatus = Database['public']['Tables']['subscription_periods']['Row']['status'];
+
+export type PeriodDeliverable = Database['public']['Tables']['period_deliverables']['Row'];
+
+export type PeriodDeliverableAdjustment = Database['public']['Tables']['period_deliverable_adjustments']['Row'];
 
 // Estructura del JSONB contract_body
 export type ContractBody = {
