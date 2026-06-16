@@ -25,6 +25,8 @@ import {
   Plus,
   Minus,
   FileSignature,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -38,6 +40,8 @@ import {
   resumeSubscriptionAction,
   cancelSubscriptionAction,
 } from '@/lib/actions/subscriptions';
+import { retryFailedScheduleAction } from '@/lib/actions/schedules';
+import { GenerateScheduleModal } from './generate-schedule-modal';
 import type {
   ClientSubscription,
   SubscriptionStatus,
@@ -55,12 +59,23 @@ type SubscriptionWithRelations = ClientSubscription & {
   source_contract: { id: string; folio: string; title: string } | null;
 };
 
+type ScheduleInfo = {
+  id: string;
+  status: string;
+  generated_at: string | null;
+  error_message: string | null;
+  item_total: number;
+  item_approved: number;
+};
+
 interface Props {
   subscription: SubscriptionWithRelations;
   deliverables: SubscriptionDeliverable[];
   periods: PeriodWithDeliverables[];
+  schedulesByPeriod: Record<string, ScheduleInfo>;
   canManage: boolean;
   canCancel: boolean;
+  canManageSchedules: boolean;
 }
 
 function todayISO() {
@@ -71,8 +86,10 @@ export function SubscriptionDetail({
   subscription,
   deliverables,
   periods,
+  schedulesByPeriod,
   canManage,
   canCancel,
+  canManageSchedules,
 }: Props) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -83,6 +100,7 @@ export function SubscriptionDetail({
   const [periodDate, setPeriodDate] = useState(todayISO());
   const [reasonModal, setReasonModal] = useState<null | 'pause' | 'cancel'>(null);
   const [reason, setReason] = useState('');
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   const status = subscription.status;
   const isPending = status === 'pending_start';
@@ -323,6 +341,22 @@ export function SubscriptionDetail({
                 onError={setError}
                 onRefresh={() => router.refresh()}
               />
+              {currentPeriodActive && (
+                <SchedulePeriodBanner
+                  schedule={schedulesByPeriod[currentPeriod.id] ?? null}
+                  canManageSchedules={canManageSchedules}
+                  retrying={actionLoading === 'retry-schedule'}
+                  onGenerate={() => {
+                    setError(null);
+                    setScheduleModalOpen(true);
+                  }}
+                  onRetry={(scheduleId) =>
+                    run('retry-schedule', () =>
+                      retryFailedScheduleAction(scheduleId)
+                    )
+                  }
+                />
+              )}
             </Section>
           ) : (
             <Section title="Períodos" icon={Repeat}>
@@ -623,7 +657,178 @@ export function SubscriptionDetail({
           </ModalFooter>
         </Modal>
       )}
+
+      {/* Modal: generar cronograma con IA */}
+      {scheduleModalOpen && currentPeriod && (
+        <GenerateScheduleModal
+          subscriptionPeriodId={currentPeriod.id}
+          periodStartDate={currentPeriod.start_date}
+          periodEndDate={currentPeriod.end_date}
+          onClose={() => setScheduleModalOpen(false)}
+          onSuccess={() => router.refresh()}
+        />
+      )}
     </>
+  );
+}
+
+// ============================================================
+// BANNER DEL CRONOGRAMA EN EL PERÍODO ACTIVO
+// ============================================================
+
+function SchedulePeriodBanner({
+  schedule,
+  canManageSchedules,
+  retrying,
+  onGenerate,
+  onRetry,
+}: {
+  schedule: ScheduleInfo | null;
+  canManageSchedules: boolean;
+  retrying: boolean;
+  onGenerate: () => void;
+  onRetry: (scheduleId: string) => void;
+}) {
+  // Sin cronograma todavía
+  if (!schedule) {
+    return (
+      <div className="mt-4 border border-photocan-amber/30 bg-photocan-amber/5 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-md bg-photocan-amber/10 border border-photocan-amber/30 grid place-items-center flex-shrink-0">
+            <Calendar className="w-5 h-5 text-photocan-amber" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium mb-1">
+              Este período aún no tiene cronograma generado
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Genera un calendario de contenido con IA a partir de la estrategia
+              aprobada del cliente y los entregables de este período.
+            </p>
+            {canManageSchedules && (
+              <Button size="sm" onClick={onGenerate}>
+                <Sparkles className="w-3.5 h-3.5" />
+                Generar cronograma con IA
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Generándose
+  if (schedule.status === 'pending' || schedule.status === 'generating') {
+    return (
+      <div className="mt-4 border border-photocan-amber/30 bg-photocan-amber/5 rounded-lg p-4 flex items-center gap-3">
+        <Loader2 className="w-5 h-5 text-photocan-amber animate-spin flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">Cronograma generándose…</div>
+          <p className="text-xs text-muted-foreground">
+            La IA está trabajando en background. Puede tomar 1-2 minutos; refresca
+            en un momento.
+          </p>
+        </div>
+        <Link
+          href={`/schedules/${schedule.id}`}
+          className="text-xs font-mono text-photocan-amber-deep hover:underline flex-shrink-0"
+        >
+          Ver detalle
+        </Link>
+      </div>
+    );
+  }
+
+  // Listo
+  if (schedule.status === 'ready') {
+    return (
+      <div className="mt-4 border border-green-500/30 bg-green-500/5 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-md bg-green-500/10 border border-green-500/30 grid place-items-center flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium mb-1">
+              Cronograma con {schedule.item_total}{' '}
+              {schedule.item_total === 1 ? 'pieza' : 'piezas'} (
+              {schedule.item_approved} aprobadas)
+            </div>
+            <Link
+              href={`/schedules/${schedule.id}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-photocan-amber-deep hover:underline"
+            >
+              Ver cronograma
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Parcial
+  if (schedule.status === 'partial') {
+    return (
+      <div className="mt-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium mb-1">Cronograma parcial</div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Se generaron {schedule.item_total} piezas, pero la generación no
+              terminó completa.
+            </p>
+            <Link
+              href={`/schedules/${schedule.id}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-photocan-amber-deep hover:underline"
+            >
+              Ver detalles
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallido
+  return (
+    <div className="mt-4 border border-destructive/30 bg-destructive/5 rounded-lg p-4">
+      <div className="flex items-start gap-3">
+        <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium mb-1">La generación falló</div>
+          {schedule.error_message && (
+            <p className="text-xs text-muted-foreground mb-3 font-mono break-words">
+              {schedule.error_message}
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            {canManageSchedules && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onRetry(schedule.id)}
+                disabled={retrying}
+              >
+                {retrying ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                Reintentar
+              </Button>
+            )}
+            <Link
+              href={`/schedules/${schedule.id}`}
+              className="text-xs font-mono text-muted-foreground hover:text-foreground"
+            >
+              Ver detalles
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

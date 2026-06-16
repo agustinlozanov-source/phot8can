@@ -98,10 +98,9 @@ const navSections: { label: string; items: NavItem[] }[] = [
       },
       {
         label: 'Cronograma',
-        href: '/schedule',
+        href: '/schedules',
         icon: Calendar,
-        requiredPermission: 'schedule.view',
-        comingSoon: true,
+        requiredPermission: 'schedules.view',
       },
     ],
   },
