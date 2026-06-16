@@ -1647,6 +1647,255 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // CONTRACT_TEMPLATES (Módulo 04 Contratos)
+      // ============================================================
+      contract_templates: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          is_default: boolean;
+          declarations: string;
+          object_clause: string;
+          validity_clause: string;
+          payment_clause: string;
+          provider_obligations: string;
+          client_obligations: string;
+          ip_clause: string;
+          confidentiality_clause: string;
+          cancellation_clause: string;
+          jurisdiction_clause: string;
+          electronic_signature_clause: string;
+          provider_legal_name: string;
+          provider_rfc: string | null;
+          provider_address: string | null;
+          provider_representative_name: string | null;
+          provider_representative_title: string | null;
+          expiration_days: number;
+          jurisdiction_city: string;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name?: string;
+          is_default?: boolean;
+          declarations: string;
+          object_clause: string;
+          validity_clause: string;
+          payment_clause: string;
+          provider_obligations: string;
+          client_obligations: string;
+          ip_clause: string;
+          confidentiality_clause: string;
+          cancellation_clause: string;
+          jurisdiction_clause: string;
+          electronic_signature_clause: string;
+          provider_legal_name: string;
+          provider_rfc?: string | null;
+          provider_address?: string | null;
+          provider_representative_name?: string | null;
+          provider_representative_title?: string | null;
+          expiration_days?: number;
+          jurisdiction_city?: string;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['contract_templates']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'contract_templates_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contract_templates_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contract_templates_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // CONTRACTS (Módulo 04 Contratos)
+      // ============================================================
+      contracts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          client_id: string;
+          contact_id: string | null;
+          source_quote_id: string | null;
+          template_id: string | null;
+          folio: string;
+          title: string;
+          status:
+            | 'draft'
+            | 'sent'
+            | 'viewed'
+            | 'signed'
+            | 'cancelled'
+            | 'expired';
+          public_access_token: string | null;
+          contract_body: Json;
+          billing_cycle: string;
+          total_amount: number;
+          currency: string;
+          start_date: string;
+          expires_at: string;
+          sent_at: string | null;
+          viewed_at: string | null;
+          signed_at: string | null;
+          cancelled_at: string | null;
+          signed_pdf_path: string | null;
+          cancellation_reason: string | null;
+          cancelled_by: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          client_id: string;
+          contact_id?: string | null;
+          source_quote_id?: string | null;
+          template_id?: string | null;
+          folio: string;
+          title: string;
+          status?:
+            | 'draft'
+            | 'sent'
+            | 'viewed'
+            | 'signed'
+            | 'cancelled'
+            | 'expired';
+          public_access_token?: string | null;
+          contract_body: Json;
+          billing_cycle: string;
+          total_amount: number;
+          currency?: string;
+          start_date: string;
+          expires_at: string;
+          sent_at?: string | null;
+          viewed_at?: string | null;
+          signed_at?: string | null;
+          cancelled_at?: string | null;
+          signed_pdf_path?: string | null;
+          cancellation_reason?: string | null;
+          cancelled_by?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['contracts']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'contracts_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contracts_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contracts_contact_id_fkey';
+            columns: ['contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'contacts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contracts_source_quote_id_fkey';
+            columns: ['source_quote_id'];
+            isOneToOne: false;
+            referencedRelation: 'quotes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contracts_template_id_fkey';
+            columns: ['template_id'];
+            isOneToOne: false;
+            referencedRelation: 'contract_templates';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contracts_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'contracts_cancelled_by_fkey';
+            columns: ['cancelled_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // CONTRACT_SIGNATURES (Módulo 04 Contratos)
+      // ============================================================
+      contract_signatures: {
+        Row: {
+          id: string;
+          contract_id: string;
+          signer_name: string;
+          signer_title: string | null;
+          signer_rfc: string | null;
+          signer_email: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          signed_at: string;
+          acceptance_text: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contract_id: string;
+          signer_name: string;
+          signer_title?: string | null;
+          signer_rfc?: string | null;
+          signer_email?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          signed_at?: string;
+          acceptance_text: string;
+        };
+        Update: Partial<Database['public']['Tables']['contract_signatures']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'contract_signatures_contract_id_fkey';
+            columns: ['contract_id'];
+            isOneToOne: false;
+            referencedRelation: 'contracts';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -1710,6 +1959,12 @@ export interface Database {
         };
         Returns: void;
       };
+      generate_contract_folio: {
+        Args: {
+          p_organization_id: string;
+        };
+        Returns: string;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
@@ -1762,6 +2017,59 @@ export type StrategyStatus = Database['public']['Tables']['strategies']['Row']['
 export type StrategyLayer = Database['public']['Tables']['strategy_layers']['Row'];
 export type StrategyLayerKind = Database['public']['Tables']['strategy_layers']['Row']['kind'];
 export type StrategyLayerStatus = Database['public']['Tables']['strategy_layers']['Row']['status'];
+
+// Contratos
+export type ContractTemplate = Database['public']['Tables']['contract_templates']['Row'];
+
+export type Contract = Database['public']['Tables']['contracts']['Row'];
+export type ContractStatus = Database['public']['Tables']['contracts']['Row']['status'];
+
+export type ContractSignature = Database['public']['Tables']['contract_signatures']['Row'];
+
+// Estructura del JSONB contract_body
+export type ContractBody = {
+  declarations: string;
+  object_clause: string;
+  validity_clause: string;
+  payment_clause: string;
+  provider_obligations: string;
+  client_obligations: string;
+  ip_clause: string;
+  confidentiality_clause: string;
+  cancellation_clause: string;
+  jurisdiction_clause: string;
+  electronic_signature_clause: string;
+  jurisdiction_city: string;
+  provider: {
+    legal_name: string;
+    rfc: string | null;
+    address: string | null;
+    representative_name: string | null;
+    representative_title: string | null;
+  };
+  client: {
+    legal_name: string;
+    rfc: string | null;
+    address: string | null;
+    representative_name: string | null;
+    representative_title: string | null;
+  };
+  services: Array<{
+    name: string;
+    description: string | null;
+    quantity: number;
+    unit_price: number;
+    total: number;
+  }>;
+  pricing: {
+    subtotal: number;
+    taxes: number;
+    total: number;
+    currency: string;
+  };
+  billing_cycle: 'monthly' | 'quarterly' | 'annual' | 'one_time';
+  start_date: string;
+};
 
 // Tipo de un turno en el transcript
 export type InterviewTurn = {
