@@ -183,16 +183,95 @@ export async function createSubscriptionFromContractAction(payload: {
     return { error: `Error al crear suscripción: ${subError?.message}` };
   }
 
-  // 5. Crear los deliverables base del contrato
+  // 5. Crear los deliverables base del contrato.
+  //    Si un servicio es un paquete, lo expandimos en sus componentes.
   const body = contract.contract_body as unknown as ContractBody;
 
-  const deliverables = body.services.map((service, idx) => ({
-    subscription_id: newSub.id,
-    service_name: service.name,
-    quantity_per_period: service.quantity,
-    notes: service.description,
-    position: idx,
-  }));
+  const deliverables: Array<{
+    subscription_id: string;
+    service_id: string | null;
+    service_name: string;
+    service_type: string | null;
+    unit: string | null;
+    quantity_per_period: number;
+    notes: string | null;
+    position: number;
+  }> = [];
+
+  let position = 0;
+
+  for (const service of body.services) {
+    // Si NO es paquete o no tiene service_id, agregar tal cual
+    if (service.service_type !== 'package' || !service.service_id) {
+      deliverables.push({
+        subscription_id: newSub.id,
+        service_id: service.service_id || null,
+        service_name: service.name,
+        service_type: service.service_type || null,
+        unit: service.unit || null,
+        quantity_per_period: service.quantity,
+        notes: service.description || null,
+        position: position++,
+      });
+      continue;
+    }
+
+    // ES UN PAQUETE: cargar sus componentes
+    const { data: components } = await ctx.supabase
+      .from('package_composition')
+      .select(
+        `
+        quantity,
+        position,
+        notes,
+        included_service:services!package_composition_included_service_id_fkey(
+          id, name, service_type, unit
+        )
+      `
+      )
+      .eq('package_service_id', service.service_id)
+      .order('position');
+
+    if (!components || components.length === 0) {
+      // Paquete vacío o sin componentes — agregar el paquete como fallback
+      deliverables.push({
+        subscription_id: newSub.id,
+        service_id: service.service_id,
+        service_name: service.name,
+        service_type: 'package',
+        unit: service.unit || null,
+        quantity_per_period: service.quantity,
+        notes: service.description || null,
+        position: position++,
+      });
+      continue;
+    }
+
+    // Expandir cada componente
+    for (const comp of components) {
+      const child = comp.included_service as unknown as {
+        id: string;
+        name: string;
+        service_type: string | null;
+        unit: string | null;
+      } | null;
+
+      if (!child) continue;
+
+      deliverables.push({
+        subscription_id: newSub.id,
+        service_id: child.id,
+        service_name: child.name,
+        service_type: child.service_type,
+        unit: child.unit,
+        // Multiplicar componente_qty × paquete_qty
+        // (si el cliente compró 2 Paquetes Silver, son 24 posts + 32 reels)
+        quantity_per_period: comp.quantity * service.quantity,
+        notes: comp.notes || null,
+        position: position++,
+      });
+    }
+  }
 
   if (deliverables.length > 0) {
     const { error: delError } = await ctx.supabase

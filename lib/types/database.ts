@@ -2527,6 +2527,11 @@ export type ContractBody = {
     quantity: number;
     unit_price: number;
     total: number;
+    // Campos opcionales para expandir paquetes al crear suscripciones.
+    // Opcionales para no romper contratos generados antes de este cambio.
+    service_id?: string | null;
+    service_type?: string | null;
+    unit?: string | null;
   }>;
   pricing: {
     subtotal: number;

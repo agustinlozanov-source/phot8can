@@ -152,7 +152,13 @@ export async function generateContractFromQuoteAction(payload: {
   // 3. Cargar items de la cotización
   const { data: items } = await ctx.supabase
     .from('quote_items')
-    .select('name, description, quantity, unit_price, subtotal')
+    .select(
+      `
+      name, description, quantity, unit_price, subtotal,
+      service_id,
+      service:services(service_type, unit)
+    `
+    )
     .eq('quote_id', quote.id)
     .order('position');
 
@@ -257,13 +263,22 @@ export async function generateContractFromQuoteAction(payload: {
       representative_title:
         validation.data.client_representative_title || null,
     },
-    services: items.map((item) => ({
-      name: item.name,
-      description: item.description || null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total: item.subtotal,
-    })),
+    services: items.map((item) => {
+      const svc = item.service as unknown as {
+        service_type: string | null;
+        unit: string | null;
+      } | null;
+      return {
+        name: item.name,
+        description: item.description || null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.subtotal,
+        service_id: item.service_id,
+        service_type: svc?.service_type || null,
+        unit: svc?.unit || null,
+      };
+    }),
     pricing: {
       subtotal: quote.subtotal,
       taxes: quote.tax_total,
