@@ -393,6 +393,9 @@ export function QuoteHeader({
         )}
 
         {/* Botón generar contrato (solo si está aprobada) */}
+        <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs font-mono">
+          DEBUG: status={quote.status} | hasExistingContract={String(hasExistingContract)} | clientName={quote.client?.name ?? 'sin nombre'}
+        </div>
         {quote.status === 'approved' && (
           <div className="mt-2">
             <GenerateContractButton
