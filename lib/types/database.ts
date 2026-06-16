@@ -2335,6 +2335,255 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // WORK_ORDERS
+      // ============================================================
+      work_orders: {
+        Row: {
+          id: string;
+          organization_id: string;
+          source_schedule_item_id: string;
+          folio: string;
+          title: string;
+          status:
+            | 'pending'
+            | 'in_production'
+            | 'review'
+            | 'ready'
+            | 'published'
+            | 'cancelled';
+          scheduled_publish_date: string;
+          scheduled_publish_time: string | null;
+          deadline: string;
+          owner_user_id: string | null;
+          brief_snapshot: Json;
+          client_id: string;
+          started_at: string | null;
+          completed_at: string | null;
+          published_at: string | null;
+          cancelled_at: string | null;
+          cancellation_reason: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          source_schedule_item_id: string;
+          folio: string;
+          title: string;
+          status?:
+            | 'pending'
+            | 'in_production'
+            | 'review'
+            | 'ready'
+            | 'published'
+            | 'cancelled';
+          scheduled_publish_date: string;
+          scheduled_publish_time?: string | null;
+          deadline: string;
+          owner_user_id?: string | null;
+          brief_snapshot: Json;
+          client_id: string;
+          started_at?: string | null;
+          completed_at?: string | null;
+          published_at?: string | null;
+          cancelled_at?: string | null;
+          cancellation_reason?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['work_orders']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'work_orders_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'work_orders_source_schedule_item_id_fkey';
+            columns: ['source_schedule_item_id'];
+            isOneToOne: true;
+            referencedRelation: 'schedule_items';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'work_orders_owner_user_id_fkey';
+            columns: ['owner_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'work_orders_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'work_orders_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // WORK_ORDER_TASKS
+      // ============================================================
+      work_order_tasks: {
+        Row: {
+          id: string;
+          work_order_id: string;
+          stage_name: string;
+          stage_type: 'design' | 'edit' | 'copy' | 'review' | 'shoot' | 'other';
+          assigned_to_user_id: string | null;
+          status: 'pending' | 'in_progress' | 'blocked' | 'done' | 'skipped';
+          position: number;
+          depends_on_task_id: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          estimated_hours: number | null;
+          actual_hours: number | null;
+          notes: string | null;
+          blocked_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          work_order_id: string;
+          stage_name: string;
+          stage_type: 'design' | 'edit' | 'copy' | 'review' | 'shoot' | 'other';
+          assigned_to_user_id?: string | null;
+          status?: 'pending' | 'in_progress' | 'blocked' | 'done' | 'skipped';
+          position?: number;
+          depends_on_task_id?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          estimated_hours?: number | null;
+          actual_hours?: number | null;
+          notes?: string | null;
+          blocked_reason?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['work_order_tasks']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'work_order_tasks_work_order_id_fkey';
+            columns: ['work_order_id'];
+            isOneToOne: false;
+            referencedRelation: 'work_orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'work_order_tasks_assigned_to_user_id_fkey';
+            columns: ['assigned_to_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'work_order_tasks_depends_on_task_id_fkey';
+            columns: ['depends_on_task_id'];
+            isOneToOne: false;
+            referencedRelation: 'work_order_tasks';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // ASSIGNMENT_RULES
+      // ============================================================
+      assignment_rules: {
+        Row: {
+          id: string;
+          organization_id: string;
+          item_type:
+            | 'post'
+            | 'reel'
+            | 'story'
+            | 'carousel'
+            | 'video'
+            | 'live'
+            | 'other';
+          stage_type: 'design' | 'edit' | 'copy' | 'review' | 'shoot' | 'other';
+          default_user_id: string | null;
+          stage_name_template: string;
+          default_days_before_publish: number;
+          default_estimated_hours: number | null;
+          position: number;
+          is_active: boolean;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          item_type:
+            | 'post'
+            | 'reel'
+            | 'story'
+            | 'carousel'
+            | 'video'
+            | 'live'
+            | 'other';
+          stage_type: 'design' | 'edit' | 'copy' | 'review' | 'shoot' | 'other';
+          default_user_id?: string | null;
+          stage_name_template: string;
+          default_days_before_publish?: number;
+          default_estimated_hours?: number | null;
+          position?: number;
+          is_active?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['assignment_rules']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'assignment_rules_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assignment_rules_default_user_id_fkey';
+            columns: ['default_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assignment_rules_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assignment_rules_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -2408,6 +2657,12 @@ export interface Database {
         Args: {
           p_start_date: string;
           p_billing_cycle: string;
+        };
+        Returns: string;
+      };
+      generate_work_order_folio: {
+        Args: {
+          p_organization_id: string;
         };
         Returns: string;
       };
@@ -2492,6 +2747,29 @@ export type ScheduleStatus = Database['public']['Tables']['schedules']['Row']['s
 export type ScheduleItem = Database['public']['Tables']['schedule_items']['Row'];
 export type ScheduleItemStatus = Database['public']['Tables']['schedule_items']['Row']['status'];
 export type ScheduleItemType = Database['public']['Tables']['schedule_items']['Row']['item_type'];
+
+// Órdenes de trabajo
+export type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
+export type WorkOrderStatus = Database['public']['Tables']['work_orders']['Row']['status'];
+
+export type WorkOrderTask = Database['public']['Tables']['work_order_tasks']['Row'];
+export type WorkOrderTaskStatus = Database['public']['Tables']['work_order_tasks']['Row']['status'];
+export type TaskStageType = Database['public']['Tables']['work_order_tasks']['Row']['stage_type'];
+
+export type AssignmentRule = Database['public']['Tables']['assignment_rules']['Row'];
+
+// Estructura del brief_snapshot en work_orders
+export type WorkOrderBriefSnapshot = {
+  item_type: string;
+  pillar_name: string | null;
+  pillar_index: number | null;
+  hook: string | null;
+  body_copy_suggestion: string | null;
+  cta: string | null;
+  format_notes: string | null;
+  hashtags_suggested: string | null;
+  key_message: string | null;
+};
 
 // Estructura del JSONB contract_body
 export type ContractBody = {
