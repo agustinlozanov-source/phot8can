@@ -623,7 +623,7 @@ export async function getWorkOrderByIdAction(id: string) {
       `
       *,
       client:clients(id, name, legal_name),
-      source_schedule_item:schedule_items!work_orders_source_schedule_item_id_fkey(id, title, item_type, pillar_name),
+      source_schedule_item:schedule_items!work_orders_source_schedule_item_id_fkey(id, title, item_type, pillar_name, schedule_id),
       owner:users!work_orders_owner_user_id_fkey(id, first_name, last_name),
       creator:users!work_orders_created_by_fkey(id, first_name, last_name),
       tasks:work_order_tasks(

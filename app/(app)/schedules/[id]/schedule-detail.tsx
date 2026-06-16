@@ -19,6 +19,7 @@ import {
   Loader2,
   List,
   CalendarDays,
+  ClipboardList,
   Briefcase,
   Repeat,
   X,
@@ -43,6 +44,7 @@ import {
 } from '@/lib/actions/schedules';
 import { RegenerateItemModal } from './regenerate-item-modal';
 import { EditItemModal } from './edit-item-modal';
+import { ConvertToOrdersModal } from './convert-to-orders-modal';
 import type {
   Schedule,
   ScheduleStatus,
@@ -50,6 +52,8 @@ import type {
   ScheduleItemStatus,
   ScheduleItemType,
 } from '@/lib/types/database';
+
+type OrgUser = { id: string; first_name: string; last_name: string };
 
 type ScheduleWithRelations = Schedule & {
   subscription_period: {
@@ -70,8 +74,11 @@ type ScheduleWithRelations = Schedule & {
 interface Props {
   schedule: ScheduleWithRelations;
   items: ScheduleItem[];
+  workOrderItemIds: string[];
+  orgUsers: OrgUser[];
   canManage: boolean;
   canRegenerateAI: boolean;
+  canManageWorkOrders: boolean;
 }
 
 const ITEM_TYPE_META: Record<
@@ -90,8 +97,11 @@ const ITEM_TYPE_META: Record<
 export function ScheduleDetail({
   schedule,
   items,
+  workOrderItemIds,
+  orgUsers,
   canManage,
   canRegenerateAI,
+  canManageWorkOrders,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<'list' | 'calendar'>('list');
@@ -105,6 +115,16 @@ export function ScheduleDetail({
   const [rejectItem, setRejectItem] = useState<ScheduleItem | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [viewItem, setViewItem] = useState<ScheduleItem | null>(null);
+  const [convertOpen, setConvertOpen] = useState(false);
+
+  // Conversión a OTs
+  const woItemSet = new Set(workOrderItemIds);
+  const approvedItems = items.filter((i) => i.status === 'approved');
+  const availableForOT = approvedItems.filter((i) => !woItemSet.has(i.id));
+  const showConvert =
+    schedule.status === 'ready' &&
+    approvedItems.length > 0 &&
+    canManageWorkOrders;
 
   const isGenerating =
     schedule.status === 'pending' || schedule.status === 'generating';
@@ -276,6 +296,25 @@ export function ScheduleDetail({
           <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive flex items-start gap-2 mt-3">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             {error}
+          </div>
+        )}
+
+        {/* Conversión a OTs */}
+        {showConvert && (
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            <Button
+              size="sm"
+              onClick={() => setConvertOpen(true)}
+              disabled={availableForOT.length === 0}
+            >
+              <ClipboardList className="w-4 h-4" />
+              Convertir aprobadas en OTs
+            </Button>
+            <span className="text-xs font-mono text-muted-foreground">
+              {approvedItems.length} aprobadas ·{' '}
+              {approvedItems.length - availableForOT.length} ya tienen OT ·{' '}
+              {availableForOT.length} disponibles
+            </span>
           </div>
         )}
       </div>
@@ -557,6 +596,16 @@ export function ScheduleDetail({
             </Button>
           </div>
         </Modal>
+      )}
+
+      {/* Modal: convertir a OTs */}
+      {convertOpen && (
+        <ConvertToOrdersModal
+          scheduleId={schedule.id}
+          itemIds={availableForOT.map((i) => i.id)}
+          users={orgUsers}
+          onClose={() => setConvertOpen(false)}
+        />
       )}
 
       {/* Modal: ver pieza (desde calendario) */}

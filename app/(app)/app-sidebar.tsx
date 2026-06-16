@@ -14,6 +14,8 @@ import {
   Package,
   MessagesSquare,
   Repeat,
+  ClipboardList,
+  CheckSquare,
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,8 @@ interface NavItem {
   href: string;
   icon: typeof LayoutDashboard;
   requiredPermission?: string;
+  // Visible si el usuario tiene CUALQUIERA de estos permisos
+  anyPermission?: string[];
   comingSoon?: boolean;
 }
 
@@ -35,6 +39,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
         label: 'Dashboard',
         href: '/dashboard',
         icon: LayoutDashboard,
+      },
+      {
+        label: 'Mis tareas',
+        href: '/my-work',
+        icon: CheckSquare,
+        requiredPermission: 'work_orders.execute',
       },
       {
         label: 'Clientes',
@@ -92,9 +102,8 @@ const navSections: { label: string; items: NavItem[] }[] = [
       {
         label: 'Órdenes de trabajo',
         href: '/work-orders',
-        icon: Package,
-        requiredPermission: 'work_order.view',
-        comingSoon: true,
+        icon: ClipboardList,
+        anyPermission: ['work_orders.view', 'work_orders.view_own'],
       },
       {
         label: 'Cronograma',
@@ -182,7 +191,9 @@ export function AppSidebar({
         {navSections.map((section) => {
           // Filtrar items que el usuario puede ver
           const visibleItems = section.items.filter((item) =>
-            hasPermission(item.requiredPermission)
+            item.anyPermission
+              ? item.anyPermission.some((p) => permSet.has(p))
+              : hasPermission(item.requiredPermission)
           );
 
           // No mostrar sección vacía

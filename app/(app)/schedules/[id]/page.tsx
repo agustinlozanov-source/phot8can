@@ -58,8 +58,32 @@ export default async function ScheduleDetailPage({
     .eq('schedule_id', id)
     .order('position');
 
+  const itemList = items || [];
+
+  // Piezas que ya tienen una OT creada (para el flujo de conversión)
+  const itemIds = itemList.map((i) => i.id);
+  let workOrderItemIds: string[] = [];
+  if (itemIds.length > 0) {
+    const { data: existingWOs } = await supabase
+      .from('work_orders')
+      .select('source_schedule_item_id')
+      .in('source_schedule_item_id', itemIds);
+    workOrderItemIds = (existingWOs || []).map((w) => w.source_schedule_item_id);
+  }
+
+  // Usuarios de la org (para asignar responsables en la conversión)
+  const { data: users } = ctx.organization
+    ? await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .eq('organization_id', ctx.organization.id)
+        .eq('is_active', true)
+        .order('first_name')
+    : { data: [] };
+
   const canManage = hasPermission(ctx, 'schedules.manage');
   const canRegenerateAI = hasPermission(ctx, 'schedules.regenerate_ai');
+  const canManageWorkOrders = hasPermission(ctx, 'work_orders.manage');
 
   return (
     <div className="p-8 max-w-6xl">
@@ -73,9 +97,12 @@ export default async function ScheduleDetailPage({
 
       <ScheduleDetail
         schedule={schedule as never}
-        items={(items || []) as never}
+        items={itemList as never}
+        workOrderItemIds={workOrderItemIds}
+        orgUsers={(users || []) as never}
         canManage={canManage}
         canRegenerateAI={canRegenerateAI}
+        canManageWorkOrders={canManageWorkOrders}
       />
     </div>
   );
