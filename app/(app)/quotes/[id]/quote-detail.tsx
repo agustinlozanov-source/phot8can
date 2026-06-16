@@ -72,6 +72,7 @@ interface Props {
   canSend: boolean;
   canDelete: boolean;
   isSuperAdmin: boolean;
+  hasExistingContract: boolean;
 }
 
 export function QuoteDetail({
@@ -86,6 +87,7 @@ export function QuoteDetail({
   canSend,
   canDelete,
   isSuperAdmin,
+  hasExistingContract,
 }: Props) {
   // El usuario puede editar contenido solo si:
   // - Tiene permiso de edit
@@ -105,6 +107,7 @@ export function QuoteDetail({
         isSuperAdmin={isSuperAdmin}
         contacts={contacts}
         itemsCount={items.length}
+        hasExistingContract={hasExistingContract}
       />
 
       {/* Aviso si está bloqueada por estado */}

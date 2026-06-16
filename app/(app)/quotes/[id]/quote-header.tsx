@@ -16,6 +16,7 @@ import {
   Check,
   AlertCircle,
   Download,
+  FileSignature,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,6 +27,7 @@ import {
   duplicateQuoteAction,
   deleteQuoteAction,
 } from '@/lib/actions/quotes';
+import { GenerateContractButton } from './generate-contract-button';
 import type { Quote, QuoteStatus } from '@/lib/types/database';
 
 interface QuoteWithRelations extends Quote {
@@ -33,6 +35,7 @@ interface QuoteWithRelations extends Quote {
     id: string;
     name: string;
     legal_name: string | null;
+    tax_id: string | null;
   } | null;
   template: {
     id: string;
@@ -48,6 +51,7 @@ interface Props {
   isSuperAdmin: boolean;
   contacts: Array<{ id: string; first_name: string; last_name: string }>;
   itemsCount: number;
+  hasExistingContract: boolean;
 }
 
 export function QuoteHeader({
@@ -57,6 +61,7 @@ export function QuoteHeader({
   canDelete,
   isSuperAdmin,
   itemsCount,
+  hasExistingContract,
 }: Props) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -384,6 +389,20 @@ export function QuoteHeader({
               Motivo del rechazo
             </div>
             <div className="text-foreground">{quote.rejection_reason}</div>
+          </div>
+        )}
+
+        {/* Botón generar contrato (solo si está aprobada) */}
+        {quote.status === 'approved' && (
+          <div className="mt-2">
+            <GenerateContractButton
+              quoteId={quote.id}
+              clientName={quote.client?.name ?? ''}
+              clientLegalName={quote.client?.legal_name ?? null}
+              clientRfc={quote.client?.tax_id ?? null}
+              clientAddress={null}
+              hasExistingContract={hasExistingContract}
+            />
           </div>
         )}
       </div>

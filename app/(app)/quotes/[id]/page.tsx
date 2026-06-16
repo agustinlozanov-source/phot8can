@@ -93,6 +93,16 @@ export default async function QuoteDetailPage({
     .order('is_primary', { ascending: false })
     .order('first_name');
 
+  // Verificar si ya existe contrato activo para esta cotización
+  const { data: existingContract } = await supabase
+    .from('contracts')
+    .select('id')
+    .eq('source_quote_id', id)
+    .not('status', 'in', '(cancelled,expired)')
+    .maybeSingle();
+
+  const hasExistingContract = !!existingContract;
+
   const canEdit = hasPermission(ctx, 'quote.edit');
   const canSend = hasPermission(ctx, 'quote.send');
   const canDelete = hasPermission(ctx, 'quote.delete');
@@ -119,6 +129,7 @@ export default async function QuoteDetailPage({
         canSend={canSend}
         canDelete={canDelete}
         isSuperAdmin={ctx.isSuperAdmin}
+        hasExistingContract={hasExistingContract}
       />
     </div>
   );
