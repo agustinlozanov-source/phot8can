@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FileSignature,
@@ -42,14 +42,17 @@ export function GenerateContractButton({
 
   // Form
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [startDate, setStartDate] = useState('');
   const [legalName, setLegalName] = useState(clientLegalName || clientName);
   const [rfc, setRfc] = useState(clientRfc || '');
   const [address, setAddress] = useState('');
   const [repName, setRepName] = useState('');
   const [repTitle, setRepTitle] = useState('');
+
+  // Set startDate client-side only to avoid SSR/hydration mismatch
+  useEffect(() => {
+    setStartDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   // Post-creación
   const [createdData, setCreatedData] = useState<{
