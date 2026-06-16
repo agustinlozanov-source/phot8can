@@ -2186,6 +2186,155 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // SCHEDULES
+      // ============================================================
+      schedules: {
+        Row: {
+          id: string;
+          organization_id: string;
+          subscription_period_id: string;
+          status: 'pending' | 'generating' | 'ready' | 'partial' | 'failed';
+          days_planned: number;
+          start_date: string;
+          generation_notes: string | null;
+          ai_model_used: string | null;
+          generation_tokens_input: number | null;
+          generation_tokens_output: number | null;
+          generation_duration_ms: number | null;
+          generated_at: string | null;
+          error_message: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          subscription_period_id: string;
+          status?: 'pending' | 'generating' | 'ready' | 'partial' | 'failed';
+          days_planned?: number;
+          start_date: string;
+          generation_notes?: string | null;
+          ai_model_used?: string | null;
+          generation_tokens_input?: number | null;
+          generation_tokens_output?: number | null;
+          generation_duration_ms?: number | null;
+          generated_at?: string | null;
+          error_message?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['schedules']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'schedules_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'schedules_subscription_period_id_fkey';
+            columns: ['subscription_period_id'];
+            isOneToOne: true;
+            referencedRelation: 'subscription_periods';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'schedules_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // SCHEDULE_ITEMS
+      // ============================================================
+      schedule_items: {
+        Row: {
+          id: string;
+          schedule_id: string;
+          scheduled_date: string;
+          scheduled_time: string | null;
+          item_type:
+            | 'post'
+            | 'reel'
+            | 'story'
+            | 'carousel'
+            | 'video'
+            | 'live'
+            | 'other';
+          pillar_name: string | null;
+          pillar_index: number | null;
+          title: string;
+          hook: string | null;
+          body_copy_suggestion: string | null;
+          cta: string | null;
+          format_notes: string | null;
+          hashtags_suggested: string | null;
+          key_message: string | null;
+          status: 'draft' | 'approved' | 'rejected';
+          approved_by: string | null;
+          approved_at: string | null;
+          rejection_reason: string | null;
+          position: number;
+          regenerated_count: number;
+          last_regenerated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          schedule_id: string;
+          scheduled_date: string;
+          scheduled_time?: string | null;
+          item_type:
+            | 'post'
+            | 'reel'
+            | 'story'
+            | 'carousel'
+            | 'video'
+            | 'live'
+            | 'other';
+          pillar_name?: string | null;
+          pillar_index?: number | null;
+          title: string;
+          hook?: string | null;
+          body_copy_suggestion?: string | null;
+          cta?: string | null;
+          format_notes?: string | null;
+          hashtags_suggested?: string | null;
+          key_message?: string | null;
+          status?: 'draft' | 'approved' | 'rejected';
+          approved_by?: string | null;
+          approved_at?: string | null;
+          rejection_reason?: string | null;
+          position?: number;
+          regenerated_count?: number;
+          last_regenerated_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['schedule_items']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'schedule_items_schedule_id_fkey';
+            columns: ['schedule_id'];
+            isOneToOne: false;
+            referencedRelation: 'schedules';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'schedule_items_approved_by_fkey';
+            columns: ['approved_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -2335,6 +2484,14 @@ export type SubscriptionPeriodStatus = Database['public']['Tables']['subscriptio
 export type PeriodDeliverable = Database['public']['Tables']['period_deliverables']['Row'];
 
 export type PeriodDeliverableAdjustment = Database['public']['Tables']['period_deliverable_adjustments']['Row'];
+
+// Cronograma
+export type Schedule = Database['public']['Tables']['schedules']['Row'];
+export type ScheduleStatus = Database['public']['Tables']['schedules']['Row']['status'];
+
+export type ScheduleItem = Database['public']['Tables']['schedule_items']['Row'];
+export type ScheduleItemStatus = Database['public']['Tables']['schedule_items']['Row']['status'];
+export type ScheduleItemType = Database['public']['Tables']['schedule_items']['Row']['item_type'];
 
 // Estructura del JSONB contract_body
 export type ContractBody = {
