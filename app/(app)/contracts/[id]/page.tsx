@@ -52,8 +52,17 @@ export default async function ContractDetailPage({
     .eq('contract_id', id)
     .maybeSingle();
 
+  // ¿Ya existe una suscripción (no cancelada) para este contrato?
+  const { data: existingSubscription } = await supabase
+    .from('client_subscriptions')
+    .select('id, status')
+    .eq('source_contract_id', id)
+    .neq('status', 'cancelled')
+    .maybeSingle();
+
   const canManage = hasPermission(ctx, 'contracts.manage');
   const canCancel = hasPermission(ctx, 'contracts.cancel');
+  const canManageSubscriptions = hasPermission(ctx, 'subscriptions.manage');
 
   return (
     <div className="p-8 max-w-6xl">
@@ -70,6 +79,8 @@ export default async function ContractDetailPage({
         signature={signature || null}
         canManage={canManage}
         canCancel={canCancel}
+        canManageSubscriptions={canManageSubscriptions}
+        existingSubscription={existingSubscription || null}
       />
     </div>
   );

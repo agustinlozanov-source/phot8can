@@ -13,6 +13,7 @@ import {
   Wallet,
   Package,
   MessagesSquare,
+  Repeat,
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
         href: '/contracts',
         icon: FileSignature,
         requiredPermission: 'contracts.view',
+      },
+      {
+        label: 'Suscripciones',
+        href: '/subscriptions',
+        icon: Repeat,
+        requiredPermission: 'subscriptions.view',
       },
     ],
   },

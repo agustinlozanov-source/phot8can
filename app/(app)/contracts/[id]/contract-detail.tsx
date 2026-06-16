@@ -23,6 +23,8 @@ import {
   User as UserIcon,
   Receipt,
   ScrollText,
+  Repeat,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -31,6 +33,7 @@ import {
   cancelContractAction,
   regenerateContractTokenAction,
 } from '@/lib/actions/contracts';
+import { createSubscriptionFromContractAction } from '@/lib/actions/subscriptions';
 import type {
   Contract,
   ContractStatus,
@@ -50,6 +53,8 @@ interface Props {
   signature: ContractSignature | null;
   canManage: boolean;
   canCancel: boolean;
+  canManageSubscriptions: boolean;
+  existingSubscription: { id: string; status: string } | null;
 }
 
 export function ContractDetail({
@@ -57,6 +62,8 @@ export function ContractDetail({
   signature,
   canManage,
   canCancel,
+  canManageSubscriptions,
+  existingSubscription,
 }: Props) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -130,6 +137,20 @@ export function ContractDetail({
     } else {
       setShowCancelModal(false);
       router.refresh();
+    }
+  }
+
+  async function handleCreateSubscription() {
+    setError(null);
+    setActionLoading('subscription');
+    const result = await createSubscriptionFromContractAction({
+      contract_id: contract.id,
+    });
+    setActionLoading(null);
+    if (result?.error) {
+      setError(result.error);
+    } else if (result?.subscriptionId) {
+      router.push(`/subscriptions/${result.subscriptionId}`);
     }
   }
 
@@ -342,6 +363,65 @@ export function ContractDetail({
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suscripción a partir del contrato firmado */}
+      {isSigned && (existingSubscription || canManageSubscriptions) && (
+        <div className="mb-6 border border-photocan-amber/30 bg-photocan-amber/5 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-md bg-photocan-amber/10 border border-photocan-amber/30 grid place-items-center flex-shrink-0">
+              <Repeat className="w-5 h-5 text-photocan-amber" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {existingSubscription ? (
+                <>
+                  <div className="text-sm font-medium mb-1">
+                    Suscripción activa
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Este contrato ya tiene una suscripción asociada. Gestiona
+                    sus períodos y entregables desde el detalle.
+                  </p>
+                  <Link
+                    href={`/subscriptions/${existingSubscription.id}`}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-photocan-amber-deep hover:underline"
+                  >
+                    Ver suscripción
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-medium mb-1">
+                    Convertir en suscripción
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Genera una suscripción a partir de este contrato para
+                    gestionar entregables recurrentes por período. Se copiarán
+                    los servicios del contrato como entregables base.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={handleCreateSubscription}
+                    disabled={!!actionLoading}
+                  >
+                    {actionLoading === 'subscription' ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Creando...
+                      </>
+                    ) : (
+                      <>
+                        <Repeat className="w-3.5 h-3.5" />
+                        Crear suscripción
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
