@@ -119,7 +119,7 @@ export async function generateContractFromQuoteAction(payload: {
       id, organization_id, client_id, contact_id, status,
       subtotal, tax_total, total, currency,
       title,
-      client:clients(id, name, legal_name, address, rfc)
+      client:clients(id, name, legal_name, address, tax_id)
     `
     )
     .eq('id', validation.data.quote_id)
@@ -219,8 +219,8 @@ export async function generateContractFromQuoteAction(payload: {
     id: string;
     name: string;
     legal_name: string | null;
-    address: string | null;
-    rfc: string | null;
+    address: unknown | null;
+    tax_id: string | null;
   };
 
   const contractBody: ContractBody = {
@@ -248,8 +248,10 @@ export async function generateContractFromQuoteAction(payload: {
         validation.data.client_legal_name ||
         client.legal_name ||
         client.name,
-      rfc: validation.data.client_rfc || client.rfc || null,
-      address: validation.data.client_address || client.address || null,
+      rfc: validation.data.client_rfc || client.tax_id || null,
+      address: validation.data.client_address || null,
+      // El address de la BD es JSON estructurado, no string.
+      // El usuario llena el address del contrato en el formulario.
       representative_name:
         validation.data.client_representative_name || null,
       representative_title:
