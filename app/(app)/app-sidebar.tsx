@@ -10,12 +10,12 @@ import {
   FileSignature,
   Sparkles,
   Calendar,
-  Wallet,
   Package,
   MessagesSquare,
   Repeat,
   ClipboardList,
   CheckSquare,
+  Receipt,
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -119,9 +119,8 @@ const navSections: { label: string; items: NavItem[] }[] = [
       {
         label: 'Finanzas',
         href: '/finance',
-        icon: Wallet,
+        icon: Receipt,
         requiredPermission: 'finance.view',
-        comingSoon: true,
       },
       {
         label: 'Equipo',

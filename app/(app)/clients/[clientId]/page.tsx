@@ -59,6 +59,18 @@ export default async function ClientDetailPage({
     accountManager = data;
   }
 
+  // Cobros del cliente (si tiene permiso de finanzas)
+  const canViewFinance = hasPermission(ctx, 'finance.view');
+  let invoices: unknown[] = [];
+  if (canViewFinance) {
+    const { data } = await supabase
+      .from('invoices')
+      .select('id, folio, title, total, currency, status, issue_date, due_date')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    invoices = data || [];
+  }
+
   return (
     <div className="p-8 max-w-7xl">
       {/* Breadcrumb */}
@@ -75,6 +87,8 @@ export default async function ClientDetailPage({
         contacts={client.contacts || []}
         users={orgUsers || []}
         accountManager={accountManager}
+        invoices={invoices as never}
+        canViewFinance={canViewFinance}
         canEdit={hasPermission(ctx, 'client.edit')}
         canManageContacts={hasPermission(ctx, 'contact.manage')}
         canDelete={ctx.isSuperAdmin}

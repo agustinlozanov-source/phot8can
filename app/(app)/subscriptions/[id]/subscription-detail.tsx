@@ -42,6 +42,11 @@ import {
 } from '@/lib/actions/subscriptions';
 import { retryFailedScheduleAction } from '@/lib/actions/schedules';
 import { GenerateScheduleModal } from './generate-schedule-modal';
+import {
+  InvoiceStatusBadge,
+  formatCurrency as formatInvoiceCurrency,
+} from '../../finance/finance-ui';
+import type { InvoiceStatus } from '@/lib/types/database';
 import type {
   ClientSubscription,
   SubscriptionStatus,
@@ -68,11 +73,23 @@ type ScheduleInfo = {
   item_approved: number;
 };
 
+type PeriodInvoice = {
+  id: string;
+  folio: string;
+  total: number;
+  currency: string;
+  status: InvoiceStatus;
+  due_date: string;
+  source_subscription_period_id: string | null;
+};
+
 interface Props {
   subscription: SubscriptionWithRelations;
   deliverables: SubscriptionDeliverable[];
   periods: PeriodWithDeliverables[];
   schedulesByPeriod: Record<string, ScheduleInfo>;
+  periodInvoices: PeriodInvoice[];
+  canViewFinance: boolean;
   canManage: boolean;
   canCancel: boolean;
   canManageSchedules: boolean;
@@ -87,6 +104,8 @@ export function SubscriptionDetail({
   deliverables,
   periods,
   schedulesByPeriod,
+  periodInvoices,
+  canViewFinance,
   canManage,
   canCancel,
   canManageSchedules,
@@ -451,6 +470,68 @@ export function SubscriptionDetail({
               </div>
             )}
           </Section>
+
+          {/* Histórico de cobros */}
+          {canViewFinance && (
+            <Section title="Histórico de cobros" icon={Receipt}>
+              {periodInvoices.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-2">
+                  Aún no se han generado cobros para esta suscripción.
+                </div>
+              ) : (
+                <div className="border border-border rounded-md overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-secondary/50">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Folio
+                        </th>
+                        <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Período
+                        </th>
+                        <th className="text-right px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Total
+                        </th>
+                        <th className="text-left px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Estado
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {periodInvoices.map((inv) => {
+                        const period = periods.find(
+                          (p) => p.id === inv.source_subscription_period_id
+                        );
+                        return (
+                          <tr
+                            key={inv.id}
+                            onClick={() => router.push(`/finance/${inv.id}`)}
+                            className="border-t border-border hover:bg-secondary/30 cursor-pointer transition-colors"
+                          >
+                            <td className="px-3 py-2 font-mono text-xs font-medium">
+                              {inv.folio}
+                            </td>
+                            <td className="px-3 py-2 text-xs">
+                              {period ? `Período ${period.period_number}` : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">
+                              {formatInvoiceCurrency(
+                                Number(inv.total),
+                                inv.currency
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              <InvoiceStatusBadge status={inv.status} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
+          )}
         </div>
 
         {/* Sidebar */}

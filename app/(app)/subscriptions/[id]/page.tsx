@@ -120,6 +120,20 @@ export default async function SubscriptionDetailPage({
     }
   }
 
+  // Cobros (invoices) generados por los períodos de esta suscripción
+  const canViewFinance = hasPermission(ctx, 'finance.view');
+  let periodInvoices: unknown[] = [];
+  if (canViewFinance && periodIds.length > 0) {
+    const { data } = await supabase
+      .from('invoices')
+      .select(
+        'id, folio, total, currency, status, due_date, source_subscription_period_id'
+      )
+      .in('source_subscription_period_id', periodIds)
+      .order('created_at', { ascending: false });
+    periodInvoices = data || [];
+  }
+
   const canManage = hasPermission(ctx, 'subscriptions.manage');
   const canCancel = hasPermission(ctx, 'subscriptions.cancel');
   const canManageSchedules = hasPermission(ctx, 'schedules.manage');
@@ -139,6 +153,8 @@ export default async function SubscriptionDetailPage({
         deliverables={(deliverables || []) as never}
         periods={(periods || []) as never}
         schedulesByPeriod={schedulesByPeriod}
+        periodInvoices={periodInvoices as never}
+        canViewFinance={canViewFinance}
         canManage={canManage}
         canCancel={canCancel}
         canManageSchedules={canManageSchedules}

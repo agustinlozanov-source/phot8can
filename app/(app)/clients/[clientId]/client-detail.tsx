@@ -1,13 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Building2, Users, FileText } from 'lucide-react';
+import { Building2, Users, FileText, Receipt } from 'lucide-react';
 import { InfoTab } from './info-tab';
 import { ContactsTab } from './contacts-tab';
+import { InvoicesTab } from './invoices-tab';
 import { ArchiveButton } from './archive-button';
-import type { Client, Contact } from '@/lib/types/database';
+import type { Client, Contact, Invoice } from '@/lib/types/database';
 
-type Tab = 'info' | 'contacts' | 'notes';
+type Tab = 'info' | 'contacts' | 'notes' | 'invoices';
+
+type InvoiceRow = Pick<
+  Invoice,
+  | 'id'
+  | 'folio'
+  | 'title'
+  | 'total'
+  | 'currency'
+  | 'status'
+  | 'issue_date'
+  | 'due_date'
+>;
 
 interface Props {
   client: Client;
@@ -19,6 +32,8 @@ interface Props {
     last_name: string;
     email: string;
   } | null;
+  invoices: InvoiceRow[];
+  canViewFinance: boolean;
   canEdit: boolean;
   canManageContacts: boolean;
   canDelete: boolean;
@@ -29,6 +44,8 @@ export function ClientDetail({
   contacts,
   users,
   accountManager,
+  invoices,
+  canViewFinance,
   canEdit,
   canManageContacts,
   canDelete,
@@ -132,6 +149,14 @@ export function ClientDetail({
             icon={<FileText className="w-3.5 h-3.5" />}
             label="Notas"
           />
+          {canViewFinance && (
+            <TabButton
+              active={tab === 'invoices'}
+              onClick={() => setTab('invoices')}
+              icon={<Receipt className="w-3.5 h-3.5" />}
+              label={`Cobros (${invoices.length})`}
+            />
+          )}
         </div>
       </div>
 
@@ -160,6 +185,10 @@ export function ClientDetail({
             client={client}
             canEdit={canEdit}
           />
+        )}
+
+        {tab === 'invoices' && canViewFinance && (
+          <InvoicesTab invoices={invoices} />
         )}
       </div>
     </>
