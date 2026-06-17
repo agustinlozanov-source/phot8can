@@ -2712,6 +2712,148 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // INVOICES (Módulo 09 Finanzas)
+      // ============================================================
+      invoices: {
+        Row: {
+          id: string;
+          organization_id: string;
+          client_id: string;
+          source: 'subscription_period' | 'manual' | 'one_time';
+          source_subscription_period_id: string | null;
+          folio: string;
+          title: string;
+          description: string | null;
+          status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+          subtotal: number;
+          taxes: number;
+          total: number;
+          currency: string;
+          issue_date: string;
+          due_date: string;
+          paid_at: string | null;
+          paid_amount: number | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          cancellation_reason: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          client_id: string;
+          source: 'subscription_period' | 'manual' | 'one_time';
+          source_subscription_period_id?: string | null;
+          folio: string;
+          title: string;
+          description?: string | null;
+          status?: 'pending' | 'paid' | 'overdue' | 'cancelled';
+          subtotal: number;
+          taxes?: number;
+          total: number;
+          currency?: string;
+          issue_date: string;
+          due_date: string;
+          paid_at?: string | null;
+          paid_amount?: number | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancellation_reason?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['invoices']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'invoices_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'invoices_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'invoices_source_subscription_period_id_fkey';
+            columns: ['source_subscription_period_id'];
+            isOneToOne: true;
+            referencedRelation: 'subscription_periods';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'invoices_cancelled_by_fkey';
+            columns: ['cancelled_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'invoices_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // PAYMENTS (Módulo 09 Finanzas)
+      // ============================================================
+      payments: {
+        Row: {
+          id: string;
+          invoice_id: string;
+          amount: number;
+          currency: string;
+          payment_method: 'transfer' | 'cash' | 'card' | 'check' | 'other';
+          payment_date: string;
+          reference: string | null;
+          receipt_url: string | null;
+          notes: string | null;
+          recorded_by: string | null;
+          recorded_at: string;
+        };
+        Insert: {
+          id?: string;
+          invoice_id: string;
+          amount: number;
+          currency?: string;
+          payment_method: 'transfer' | 'cash' | 'card' | 'check' | 'other';
+          payment_date: string;
+          reference?: string | null;
+          receipt_url?: string | null;
+          notes?: string | null;
+          recorded_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['payments']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'payments_invoice_id_fkey';
+            columns: ['invoice_id'];
+            isOneToOne: true;
+            referencedRelation: 'invoices';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'payments_recorded_by_fkey';
+            columns: ['recorded_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -2793,6 +2935,16 @@ export interface Database {
           p_organization_id: string;
         };
         Returns: string;
+      };
+      generate_invoice_folio: {
+        Args: {
+          p_organization_id: string;
+        };
+        Returns: string;
+      };
+      mark_overdue_invoices: {
+        Args: Record<string, never>;
+        Returns: number;
       };
     };
     Enums: { [_ in never]: never };
@@ -2919,6 +3071,14 @@ export type TeamMember = User & {
   }>;
   active_tasks_count: number;
 };
+
+// Finanzas
+export type Invoice = Database['public']['Tables']['invoices']['Row'];
+export type InvoiceStatus = Database['public']['Tables']['invoices']['Row']['status'];
+export type InvoiceSource = Database['public']['Tables']['invoices']['Row']['source'];
+
+export type Payment = Database['public']['Tables']['payments']['Row'];
+export type PaymentMethod = Database['public']['Tables']['payments']['Row']['payment_method'];
 
 // Estructura del JSONB contract_body
 export type ContractBody = {
