@@ -1,6 +1,7 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/app/(auth)/login/actions';
 import { useRouter } from 'next/navigation';
@@ -42,12 +43,16 @@ export function AppTopbar({ displayName, initials, roles }: AppTopbarProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/50 border border-border">
+        <Link
+          href="/profile"
+          title="Mi perfil"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/50 border border-border hover:bg-secondary transition-colors"
+        >
           <div className="w-6 h-6 rounded bg-gradient-to-br from-photocan-amber to-photocan-amber-deep grid place-items-center text-[10px] font-bold text-black">
             {initials}
           </div>
           <div className="text-sm font-medium">{displayName}</div>
-        </div>
+        </Link>
 
         <Button variant="ghost" size="sm" onClick={handleLogout}>
           <LogOut className="w-4 h-4" />

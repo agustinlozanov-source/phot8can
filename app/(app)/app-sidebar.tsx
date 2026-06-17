@@ -127,7 +127,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
         label: 'Equipo',
         href: '/team',
         icon: Users,
-        requiredPermission: 'config.users',
+        requiredPermission: 'team.view',
       },
       {
         label: 'Catálogo',
