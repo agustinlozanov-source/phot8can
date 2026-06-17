@@ -2679,6 +2679,39 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // TEAM_INVITATION_ROLES (junction: invitación → roles)
+      // ============================================================
+      team_invitation_roles: {
+        Row: {
+          invitation_id: string;
+          role_id: string;
+        };
+        Insert: {
+          invitation_id: string;
+          role_id: string;
+        };
+        Update: Partial<
+          Database['public']['Tables']['team_invitation_roles']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'team_invitation_roles_invitation_id_fkey';
+            columns: ['invitation_id'];
+            isOneToOne: false;
+            referencedRelation: 'team_invitations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'team_invitation_roles_role_id_fkey';
+            columns: ['role_id'];
+            isOneToOne: false;
+            referencedRelation: 'roles';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {

@@ -94,6 +94,20 @@ async function checkPermission(code: string): Promise<boolean> {
   return hasPermission(authCtx, code);
 }
 
+// Valida que un conjunto de roles pertenezca a la org (o sea base)
+async function validateRolesForOrg(
+  sb: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  roleIds: string[]
+): Promise<boolean> {
+  const { data } = await sb
+    .from('roles')
+    .select('id, organization_id, is_system')
+    .in('id', roleIds);
+  if (!data || data.length !== roleIds.length) return false;
+  return data.every((r) => r.organization_id === orgId || r.is_system);
+}
+
 // ============================================================
 // CREAR INVITACIÓN
 // ============================================================
@@ -122,31 +136,16 @@ export async function createInvitationAction(payload: {
   if (!orgId) return { error: 'No se pudo determinar la organización' };
 
   const email = validation.data.email.toLowerCase().trim();
+  const roleIds = validation.data.intended_role_ids;
 
-  // LIMITACIÓN TEMPORAL: team_invitations.intended_role_id es una sola columna.
-  // Hasta aplicar la migración a múltiples roles, solo aceptamos 1 rol.
-  if (validation.data.intended_role_ids.length > 1) {
-    return {
-      error:
-        'Por ahora solo se soporta 1 rol por invitación. Migración pendiente.',
-    };
+  // Todos los roles deben existir y pertenecer a la org (o ser base)
+  const rolesOk = await validateRolesForOrg(ctx.supabase, orgId, roleIds);
+  if (!rolesOk) {
+    return { error: 'Uno o más roles no son válidos para esta organización' };
   }
 
-  // TODO(multi-rol invitaciones): cuando se aplique la migración SQL
-  // (intended_role_ids uuid[] o tabla junction team_invitation_roles),
-  // guardar todos los roles en lugar de solo el primero.
-  const intendedRoleId = validation.data.intended_role_ids[0];
-
-  // El rol debe existir y pertenecer a la org (los roles base también tienen org)
-  const { data: role } = await ctx.supabase
-    .from('roles')
-    .select('id, organization_id, is_system')
-    .eq('id', intendedRoleId)
-    .maybeSingle();
-
-  if (!role || (role.organization_id !== orgId && !role.is_system)) {
-    return { error: 'El rol indicado no es válido para esta organización' };
-  }
+  // intended_role_id queda como "rol principal" por compatibilidad.
+  const intendedRoleId = roleIds[0];
 
   // El email no debe ser un usuario activo de la org
   const { data: existingUser } = await ctx.supabase
@@ -196,6 +195,7 @@ export async function createInvitationAction(payload: {
       email,
       intended_first_name: validation.data.intended_first_name?.trim() || null,
       intended_last_name: validation.data.intended_last_name?.trim() || null,
+      // deprecated: rol principal por compatibilidad. Fuente real: team_invitation_roles
       intended_role_id: intendedRoleId,
       invitation_token: token as string,
       status: 'pending',
@@ -208,6 +208,19 @@ export async function createInvitationAction(payload: {
 
   if (insertError || !invitation) {
     return { error: `Error al crear invitación: ${insertError?.message}` };
+  }
+
+  // Persistir todos los roles en la junction
+  const { error: rolesError } = await ctx.supabase
+    .from('team_invitation_roles')
+    .insert(
+      roleIds.map((role_id) => ({ invitation_id: invitation.id, role_id }))
+    );
+
+  if (rolesError) {
+    // Rollback de la invitación si fallan los roles
+    await ctx.supabase.from('team_invitations').delete().eq('id', invitation.id);
+    return { error: `Error al asignar roles: ${rolesError.message}` };
   }
 
   revalidatePath('/team');
@@ -372,7 +385,8 @@ export async function listInvitationsAction(filters?: {
       `
       *,
       intended_role:roles!team_invitations_intended_role_id_fkey(id, name, description),
-      creator:users!team_invitations_created_by_fkey(id, first_name, last_name)
+      creator:users!team_invitations_created_by_fkey(id, first_name, last_name),
+      team_invitation_roles(role:roles(id, name, description))
     `
     )
     .eq('organization_id', orgId);
@@ -386,7 +400,18 @@ export async function listInvitationsAction(filters?: {
 
   if (error) return { error: `Error al cargar invitaciones: ${error.message}` };
 
-  return { invitations: data || [] };
+  // Aplanar los roles (many-to-many)
+  const invitations = (data || []).map((inv) => {
+    const { team_invitation_roles, ...rest } = inv as typeof inv & {
+      team_invitation_roles: Array<{ role: unknown } | null> | null;
+    };
+    const roles = (team_invitation_roles || [])
+      .map((tir) => tir?.role)
+      .filter(Boolean);
+    return { ...rest, roles };
+  });
+
+  return { invitations };
 }
 
 // ============================================================
@@ -526,14 +551,26 @@ export async function acceptInvitationPublicAction(payload: {
     return { error: `Error al crear usuario: ${userError?.message}` };
   }
 
-  // 3. Asignar el rol previsto
-  const { error: roleError } = await supabase.from('user_roles').insert({
-    user_id: newUser.id,
-    role_id: invitation.intended_role_id,
-  });
+  // 3. Asignar todos los roles de la invitación (desde la junction)
+  const { data: invitationRoles } = await supabase
+    .from('team_invitation_roles')
+    .select('role_id')
+    .eq('invitation_id', invitation.id);
 
-  if (roleError) {
-    console.error('[acceptInvitation] Error asignando rol:', roleError);
+  let roleIds = (invitationRoles || []).map((r) => r.role_id);
+
+  // Fallback para invitaciones viejas sin filas en la junction
+  if (roleIds.length === 0 && invitation.intended_role_id) {
+    roleIds = [invitation.intended_role_id];
+  }
+
+  if (roleIds.length > 0) {
+    const { error: roleError } = await supabase.from('user_roles').insert(
+      roleIds.map((role_id) => ({ user_id: newUser.id, role_id }))
+    );
+    if (roleError) {
+      console.error('[acceptInvitation] Error asignando roles:', roleError);
+    }
   }
 
   // 4. Marcar invitación como aceptada
