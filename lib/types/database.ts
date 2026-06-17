@@ -3230,6 +3230,7 @@ export interface Database {
           channel_id: string;
           platform: 'whatsapp' | 'instagram' | 'facebook' | 'telegram' | 'sms';
           remote_id: string;
+          zernio_conversation_id: string | null;
           remote_phone: string | null;
           remote_handle: string | null;
           remote_display_name: string | null;
@@ -3257,6 +3258,7 @@ export interface Database {
           channel_id: string;
           platform: 'whatsapp' | 'instagram' | 'facebook' | 'telegram' | 'sms';
           remote_id: string;
+          zernio_conversation_id?: string | null;
           remote_phone?: string | null;
           remote_handle?: string | null;
           remote_display_name?: string | null;
