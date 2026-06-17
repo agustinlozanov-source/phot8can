@@ -303,6 +303,7 @@ export async function createManualInvoiceAction(payload: {
   }
 
   revalidatePath('/finance');
+  revalidatePath('/finance/invoices');
   return { success: true, invoiceId: invoice.id, folio: invoice.folio };
 }
 
@@ -400,6 +401,7 @@ export async function registerPaymentAction(payload: {
   }
 
   revalidatePath('/finance');
+  revalidatePath('/finance/invoices');
   revalidatePath(`/finance/${invoice.id}`);
   revalidatePath(`/clients/${invoice.client_id}`);
   return { success: true, paymentId: payment.id };
@@ -469,6 +471,7 @@ export async function cancelInvoiceAction(payload: {
   if (error) return { error: `Error al cancelar: ${error.message}` };
 
   revalidatePath('/finance');
+  revalidatePath('/finance/invoices');
   revalidatePath(`/finance/${invoice.id}`);
   return { success: true };
 }
@@ -549,6 +552,7 @@ export async function updateInvoiceAction(payload: {
   if (error) return { error: `Error al actualizar: ${error.message}` };
 
   revalidatePath('/finance');
+  revalidatePath('/finance/invoices');
   revalidatePath(`/finance/${invoice_id}`);
   return { success: true };
 }
@@ -609,6 +613,7 @@ export async function deletePaymentAction(paymentId: string) {
   }
 
   revalidatePath('/finance');
+  revalidatePath('/finance/invoices');
   revalidatePath(`/finance/${invoice.id}`);
   revalidatePath(`/clients/${invoice.client_id}`);
   return { success: true };
@@ -630,5 +635,6 @@ export async function retryOverdueCheckAction() {
   if (error) return { error: error.message };
 
   revalidatePath('/finance');
+  revalidatePath('/finance/invoices');
   return { count: (data as number) ?? 0 };
 }

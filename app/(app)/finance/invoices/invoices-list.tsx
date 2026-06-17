@@ -12,7 +12,7 @@ import {
   formatDate,
   dueDateInfo,
   TONE_CLASS,
-} from './finance-ui';
+} from '../finance-ui';
 import { CreateInvoiceModal } from './create-invoice-modal';
 
 type InvoiceRow = Invoice & {

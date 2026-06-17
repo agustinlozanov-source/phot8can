@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Receipt, TrendingDown, Building2, Tag, BarChart3 } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Receipt,
+  TrendingDown,
+  Building2,
+  Tag,
+  BarChart3,
+} from 'lucide-react';
 
 interface Props {
   canViewCobros: boolean;
@@ -17,27 +24,36 @@ export function FinanceNav({
 }: Props) {
   const pathname = usePathname();
 
-  // Rutas de gastos que NO son la lista principal (para resaltar bien cada tab)
+  const isResumen = pathname === '/finance';
   const isExpensesSection =
     pathname === '/finance/expenses' ||
     pathname.startsWith('/finance/expenses/');
   const isVendors = pathname.startsWith('/finance/vendors');
   const isCategories = pathname.startsWith('/finance/categories');
   const isReports = pathname.startsWith('/finance/reports');
+  // Cobros: la lista /finance/invoices y el detalle /finance/[id]
+  const isInvoices =
+    pathname.startsWith('/finance/invoices') ||
+    (pathname.startsWith('/finance/') &&
+      !isExpensesSection &&
+      !isVendors &&
+      !isCategories &&
+      !isReports);
 
   const tabs = [
     {
-      label: 'Cobros',
+      label: 'Resumen',
       href: '/finance',
+      icon: LayoutDashboard,
+      show: canViewCobros,
+      active: isResumen,
+    },
+    {
+      label: 'Cobros',
+      href: '/finance/invoices',
       icon: Receipt,
       show: canViewCobros,
-      active:
-        pathname === '/finance' ||
-        (pathname.startsWith('/finance/') &&
-          !isExpensesSection &&
-          !isVendors &&
-          !isCategories &&
-          !isReports),
+      active: isInvoices,
     },
     {
       label: 'Gastos',
@@ -73,14 +89,14 @@ export function FinanceNav({
 
   return (
     <div className="border-b border-border mb-6">
-      <div className="flex gap-1">
+      <div className="flex gap-1 overflow-x-auto">
         {tabs.map((t) => {
           const Icon = t.icon;
           return (
             <Link
               key={t.href}
               href={t.href}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 t.active
                   ? 'border-photocan-amber text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
