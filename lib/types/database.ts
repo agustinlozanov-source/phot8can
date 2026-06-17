@@ -177,6 +177,8 @@ export interface Database {
           description: string | null;
           color: string | null;
           is_system: boolean;
+          is_custom: boolean;
+          cloned_from_role_id: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -188,6 +190,8 @@ export interface Database {
           description?: string | null;
           color?: string | null;
           is_system?: boolean;
+          is_custom?: boolean;
+          cloned_from_role_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['roles']['Insert']>;
@@ -197,6 +201,13 @@ export interface Database {
             columns: ['organization_id'];
             isOneToOne: false;
             referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'roles_cloned_from_role_id_fkey';
+            columns: ['cloned_from_role_id'];
+            isOneToOne: false;
+            referencedRelation: 'roles';
             referencedColumns: ['id'];
           }
         ];
@@ -2584,6 +2595,90 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // TEAM_INVITATIONS (Módulo 08 Equipo)
+      // ============================================================
+      team_invitations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          email: string;
+          intended_first_name: string | null;
+          intended_last_name: string | null;
+          intended_role_id: string;
+          invitation_token: string;
+          status: 'pending' | 'accepted' | 'cancelled' | 'expired';
+          message: string | null;
+          expires_at: string;
+          accepted_at: string | null;
+          accepted_by_user_id: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          cancellation_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          email: string;
+          intended_first_name?: string | null;
+          intended_last_name?: string | null;
+          intended_role_id: string;
+          invitation_token?: string;
+          status?: 'pending' | 'accepted' | 'cancelled' | 'expired';
+          message?: string | null;
+          expires_at?: string;
+          accepted_at?: string | null;
+          accepted_by_user_id?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancellation_reason?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['team_invitations']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'team_invitations_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'team_invitations_intended_role_id_fkey';
+            columns: ['intended_role_id'];
+            isOneToOne: false;
+            referencedRelation: 'roles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'team_invitations_accepted_by_user_id_fkey';
+            columns: ['accepted_by_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'team_invitations_cancelled_by_fkey';
+            columns: ['cancelled_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'team_invitations_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -2769,6 +2864,15 @@ export type WorkOrderBriefSnapshot = {
   format_notes: string | null;
   hashtags_suggested: string | null;
   key_message: string | null;
+};
+
+// Equipo
+export type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
+export type TeamInvitationStatus = Database['public']['Tables']['team_invitations']['Row']['status'];
+
+// Helper para clonar roles
+export type RoleWithCustomFlags = Database['public']['Tables']['roles']['Row'] & {
+  // Por si necesitamos info computada en el futuro
 };
 
 // Estructura del JSONB contract_body
