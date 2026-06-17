@@ -169,11 +169,6 @@ export function FinanceSummary({
             }
           />
         </div>
-        {!monthVsMonth && (
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Algunos indicadores requieren permiso de reportes financieros.
-          </p>
-        )}
       </section>
 
       {/* SECCIÓN 3 — PRÓXIMOS MOVIMIENTOS */}

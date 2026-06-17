@@ -56,12 +56,22 @@ function resolveOrgId(
   return null;
 }
 
-async function checkReports(): Promise<boolean> {
+async function checkPerm(code: string): Promise<boolean> {
   const { getActiveContext, hasPermission } = await import(
     '@/lib/auth/context'
   );
   const authCtx = await getActiveContext();
-  return hasPermission(authCtx, 'finance.view_reports');
+  return hasPermission(authCtx, code);
+}
+
+// Reporte completo (vista /finance/reports)
+async function checkReports(): Promise<boolean> {
+  return checkPerm('finance.view_reports');
+}
+
+// KPIs básicos del Resumen (agregados del mes) — accesible con finance.view
+async function checkBasic(): Promise<boolean> {
+  return checkPerm('finance.view');
 }
 
 // ============================================================
@@ -188,7 +198,7 @@ export async function getExpensesByCategoryAction(payload?: {
 }) {
   const ctx = await getContext();
   if ('error' in ctx) return { error: ctx.error };
-  if (!(await checkReports())) return { error: 'Sin permiso para ver reportes' };
+  if (!(await checkBasic())) return { error: 'Sin permiso para ver finanzas' };
 
   const orgId = resolveOrgId(ctx);
   if (!orgId) return { error: 'No se pudo determinar la organización' };
@@ -333,7 +343,7 @@ export async function getTopVendorsAction(payload?: {
 export async function getMonthVsMonthAction() {
   const ctx = await getContext();
   if ('error' in ctx) return { error: ctx.error };
-  if (!(await checkReports())) return { error: 'Sin permiso para ver reportes' };
+  if (!(await checkBasic())) return { error: 'Sin permiso para ver finanzas' };
 
   const orgId = resolveOrgId(ctx);
   if (!orgId) return { error: 'No se pudo determinar la organización' };
@@ -391,7 +401,7 @@ export async function getMonthVsMonthAction() {
 export async function getPendingInvoicesReportAction() {
   const ctx = await getContext();
   if ('error' in ctx) return { error: ctx.error };
-  if (!(await checkReports())) return { error: 'Sin permiso para ver reportes' };
+  if (!(await checkBasic())) return { error: 'Sin permiso para ver finanzas' };
 
   const orgId = resolveOrgId(ctx);
   if (!orgId) return { error: 'No se pudo determinar la organización' };
