@@ -93,6 +93,67 @@ function resolveOrgId(
   return null;
 }
 
+type Ctx = Exclude<Awaited<ReturnType<typeof getContext>>, { error: string }>;
+
+/**
+ * Crea automáticamente un invoice (factura interna) para un período de
+ * suscripción. NO bloquea el flujo del período: si algo falla, solo loggea.
+ * IVA 16% (MX) por default — YAGNI hasta que varíe por organización.
+ */
+async function createPeriodInvoice(
+  ctx: Ctx,
+  params: {
+    orgId: string;
+    clientId: string;
+    periodId: string;
+    periodNumber: number;
+    subscriptionName: string;
+    pricePerPeriod: number;
+    currency: string;
+    startDate: string;
+  }
+) {
+  try {
+    const { data: folio } = await ctx.supabase.rpc('generate_invoice_folio', {
+      p_organization_id: params.orgId,
+    });
+    if (!folio) {
+      console.error('[createPeriodInvoice] No se pudo generar folio');
+      return;
+    }
+
+    const dueDate = new Date(params.startDate);
+    dueDate.setDate(dueDate.getDate() + 7); // 7 días para pagar
+
+    const total = params.pricePerPeriod;
+    const taxes = Math.round(total * 0.16 * 100) / 100; // IVA 16%
+    const subtotal = Math.round((total - taxes) * 100) / 100;
+
+    const { error } = await ctx.supabase.from('invoices').insert({
+      organization_id: params.orgId,
+      client_id: params.clientId,
+      source: 'subscription_period',
+      source_subscription_period_id: params.periodId,
+      folio: folio as string,
+      title: `${params.subscriptionName} — Período ${params.periodNumber}`,
+      status: 'pending',
+      subtotal,
+      taxes,
+      total,
+      currency: params.currency,
+      issue_date: params.startDate,
+      due_date: dueDate.toISOString().split('T')[0],
+      created_by: ctx.isSuperAdmin ? null : ctx.userId,
+    });
+
+    if (error) {
+      console.error('[createPeriodInvoice] Error al crear invoice:', error);
+    }
+  } catch (err) {
+    console.error('[createPeriodInvoice] Excepción:', err);
+  }
+}
+
 // ============================================================
 // 🌟 CREAR SUSCRIPCIÓN DESDE CONTRATO FIRMADO
 // ============================================================
@@ -315,7 +376,9 @@ export async function startFirstPeriodAction(payload: {
   // 1. Cargar suscripción
   const { data: subscription } = await ctx.supabase
     .from('client_subscriptions')
-    .select('id, status, billing_cycle, organization_id')
+    .select(
+      'id, status, billing_cycle, organization_id, client_id, name, currency, price_per_period'
+    )
     .eq('id', validation.data.subscription_id)
     .maybeSingle();
 
@@ -410,8 +473,21 @@ export async function startFirstPeriodAction(payload: {
     return { error: `Error al activar suscripción: ${updateError.message}` };
   }
 
+  // 7. Auto-crear invoice para este período (no bloquea si falla)
+  await createPeriodInvoice(ctx, {
+    orgId: subscription.organization_id,
+    clientId: subscription.client_id,
+    periodId: newPeriod.id,
+    periodNumber: 1,
+    subscriptionName: subscription.name,
+    pricePerPeriod: subscription.price_per_period,
+    currency: subscription.currency,
+    startDate: validation.data.start_date,
+  });
+
   revalidatePath('/subscriptions');
   revalidatePath(`/subscriptions/${subscription.id}`);
+  revalidatePath('/finance');
 
   return { success: true, periodId: newPeriod.id };
 }
@@ -615,7 +691,9 @@ export async function renewPeriodAction(payload: {
   // 1. Cargar suscripción
   const { data: subscription } = await ctx.supabase
     .from('client_subscriptions')
-    .select('id, status, billing_cycle, total_periods_billed')
+    .select(
+      'id, status, billing_cycle, total_periods_billed, organization_id, client_id, name, currency, price_per_period'
+    )
     .eq('id', validation.data.subscription_id)
     .maybeSingle();
 
@@ -721,7 +799,20 @@ export async function renewPeriodAction(payload: {
     })
     .eq('id', subscription.id);
 
+  // 8. Auto-crear invoice para el nuevo período (no bloquea si falla)
+  await createPeriodInvoice(ctx, {
+    orgId: subscription.organization_id,
+    clientId: subscription.client_id,
+    periodId: newPeriod.id,
+    periodNumber: newPeriodNumber,
+    subscriptionName: subscription.name,
+    pricePerPeriod: subscription.price_per_period,
+    currency: subscription.currency,
+    startDate: validation.data.start_date,
+  });
+
   revalidatePath(`/subscriptions/${subscription.id}`);
+  revalidatePath('/finance');
   return { success: true, periodId: newPeriod.id };
 }
 
