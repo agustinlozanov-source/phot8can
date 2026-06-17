@@ -2,14 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Receipt, TrendingDown, Building2, Tag } from 'lucide-react';
+import { Receipt, TrendingDown, Building2, Tag, BarChart3 } from 'lucide-react';
 
 interface Props {
   canViewCobros: boolean;
   canViewExpenses: boolean;
+  canViewReports?: boolean;
 }
 
-export function FinanceNav({ canViewCobros, canViewExpenses }: Props) {
+export function FinanceNav({
+  canViewCobros,
+  canViewExpenses,
+  canViewReports = false,
+}: Props) {
   const pathname = usePathname();
 
   // Rutas de gastos que NO son la lista principal (para resaltar bien cada tab)
@@ -18,6 +23,7 @@ export function FinanceNav({ canViewCobros, canViewExpenses }: Props) {
     pathname.startsWith('/finance/expenses/');
   const isVendors = pathname.startsWith('/finance/vendors');
   const isCategories = pathname.startsWith('/finance/categories');
+  const isReports = pathname.startsWith('/finance/reports');
 
   const tabs = [
     {
@@ -30,7 +36,8 @@ export function FinanceNav({ canViewCobros, canViewExpenses }: Props) {
         (pathname.startsWith('/finance/') &&
           !isExpensesSection &&
           !isVendors &&
-          !isCategories),
+          !isCategories &&
+          !isReports),
     },
     {
       label: 'Gastos',
@@ -52,6 +59,13 @@ export function FinanceNav({ canViewCobros, canViewExpenses }: Props) {
       icon: Tag,
       show: canViewExpenses,
       active: isCategories,
+    },
+    {
+      label: 'Reportes',
+      href: '/finance/reports',
+      icon: BarChart3,
+      show: canViewReports,
+      active: isReports,
     },
   ].filter((t) => t.show);
 

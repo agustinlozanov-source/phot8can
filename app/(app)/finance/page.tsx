@@ -89,6 +89,7 @@ export default async function FinancePage() {
       <FinanceNav
         canViewCobros
         canViewExpenses={hasPermission(ctx, 'expenses.view')}
+        canViewReports={hasPermission(ctx, 'finance.view_reports')}
       />
 
       {/* Stats */}

@@ -55,6 +55,7 @@ export default async function VendorsPage() {
       <FinanceNav
         canViewCobros={hasPermission(ctx, 'finance.view')}
         canViewExpenses
+        canViewReports={hasPermission(ctx, 'finance.view_reports')}
       />
 
       <VendorsList vendors={vendors as never} canManage={canManage} />

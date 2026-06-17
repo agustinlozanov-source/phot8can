@@ -53,6 +53,7 @@ export default async function CategoriesPage() {
       <FinanceNav
         canViewCobros={hasPermission(ctx, 'finance.view')}
         canViewExpenses
+        canViewReports={hasPermission(ctx, 'finance.view_reports')}
       />
 
       <CategoriesList
