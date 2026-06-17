@@ -39,6 +39,7 @@ export interface Database {
           primary_color: string | null;
           secondary_color: string | null;
           email_settings: Json | null;
+          zernio_profile_id: string | null;
           is_active: boolean;
           created_by: string | null;
           created_at: string;
@@ -60,6 +61,7 @@ export interface Database {
           primary_color?: string | null;
           secondary_color?: string | null;
           email_settings?: Json | null;
+          zernio_profile_id?: string | null;
           is_active?: boolean;
           created_by?: string | null;
         };
