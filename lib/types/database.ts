@@ -2875,6 +2875,18 @@ export type RoleWithCustomFlags = Database['public']['Tables']['roles']['Row'] &
   // Por si necesitamos info computada en el futuro
 };
 
+// Miembro del equipo con sus roles (many-to-many) y stats
+export type TeamMember = User & {
+  roles: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    is_system: boolean;
+    is_custom: boolean;
+  }>;
+  active_tasks_count: number;
+};
+
 // Estructura del JSONB contract_body
 export type ContractBody = {
   declarations: string;

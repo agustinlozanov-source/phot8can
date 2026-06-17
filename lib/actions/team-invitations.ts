@@ -11,7 +11,10 @@ import type { TeamInvitationStatus } from '@/lib/types/database';
 
 const createInvitationSchema = z.object({
   email: z.string().email('Email inválido'),
-  intended_role_id: z.string().uuid(),
+  intended_role_ids: z
+    .array(z.string().uuid())
+    .min(1, 'Selecciona al menos un rol')
+    .max(10, 'Máximo 10 roles'),
   intended_first_name: z.string().max(100).optional(),
   intended_last_name: z.string().max(100).optional(),
   message: z.string().max(500).optional(),
@@ -97,7 +100,7 @@ async function checkPermission(code: string): Promise<boolean> {
 
 export async function createInvitationAction(payload: {
   email: string;
-  intended_role_id: string;
+  intended_role_ids: string[];
   intended_first_name?: string;
   intended_last_name?: string;
   message?: string;
@@ -120,11 +123,25 @@ export async function createInvitationAction(payload: {
 
   const email = validation.data.email.toLowerCase().trim();
 
+  // LIMITACIÓN TEMPORAL: team_invitations.intended_role_id es una sola columna.
+  // Hasta aplicar la migración a múltiples roles, solo aceptamos 1 rol.
+  if (validation.data.intended_role_ids.length > 1) {
+    return {
+      error:
+        'Por ahora solo se soporta 1 rol por invitación. Migración pendiente.',
+    };
+  }
+
+  // TODO(multi-rol invitaciones): cuando se aplique la migración SQL
+  // (intended_role_ids uuid[] o tabla junction team_invitation_roles),
+  // guardar todos los roles en lugar de solo el primero.
+  const intendedRoleId = validation.data.intended_role_ids[0];
+
   // El rol debe existir y pertenecer a la org (los roles base también tienen org)
   const { data: role } = await ctx.supabase
     .from('roles')
     .select('id, organization_id, is_system')
-    .eq('id', validation.data.intended_role_id)
+    .eq('id', intendedRoleId)
     .maybeSingle();
 
   if (!role || (role.organization_id !== orgId && !role.is_system)) {
@@ -179,7 +196,7 @@ export async function createInvitationAction(payload: {
       email,
       intended_first_name: validation.data.intended_first_name?.trim() || null,
       intended_last_name: validation.data.intended_last_name?.trim() || null,
-      intended_role_id: validation.data.intended_role_id,
+      intended_role_id: intendedRoleId,
       invitation_token: token as string,
       status: 'pending',
       message: validation.data.message?.trim() || null,

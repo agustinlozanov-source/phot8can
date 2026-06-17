@@ -12,7 +12,10 @@ const createMemberSchema = z.object({
   email: z.string().email('Email inválido'),
   first_name: z.string().min(2, 'Nombre requerido').max(100),
   last_name: z.string().min(2, 'Apellido requerido').max(100),
-  role_id: z.string().uuid(),
+  role_ids: z
+    .array(z.string().uuid())
+    .min(1, 'Selecciona al menos un rol')
+    .max(10, 'Máximo 10 roles'),
   temporary_password: z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres'),
@@ -22,7 +25,7 @@ const updateMemberSchema = z.object({
   user_id: z.string().uuid(),
   first_name: z.string().min(2).max(100).optional(),
   last_name: z.string().min(2).max(100).optional(),
-  role_id: z.string().uuid().optional(),
+  role_ids: z.array(z.string().uuid()).min(1).max(10).optional(),
 });
 
 const setActiveSchema = z.object({
@@ -168,10 +171,27 @@ async function countActiveDirectors(
   return active.size;
 }
 
-// Reemplaza los roles del usuario por uno solo
-async function setUserSingleRole(sb: SB, userId: string, roleId: string) {
+// Reemplaza todos los roles del usuario por el conjunto indicado
+async function setUserRoles(sb: SB, userId: string, roleIds: string[]) {
   await sb.from('user_roles').delete().eq('user_id', userId);
-  return sb.from('user_roles').insert({ user_id: userId, role_id: roleId });
+  if (roleIds.length === 0) return { error: null };
+  return sb
+    .from('user_roles')
+    .insert(roleIds.map((role_id) => ({ user_id: userId, role_id })));
+}
+
+// Valida que un conjunto de roles pertenezca a la org (o sea base)
+async function validateRolesForOrg(
+  sb: SB,
+  orgId: string,
+  roleIds: string[]
+): Promise<boolean> {
+  const { data } = await sb
+    .from('roles')
+    .select('id, organization_id, is_system')
+    .in('id', roleIds);
+  if (!data || data.length !== roleIds.length) return false;
+  return data.every((r) => r.organization_id === orgId || r.is_system);
 }
 
 // ============================================================
@@ -205,9 +225,8 @@ export async function listTeamMembersAction(filters?: {
     .from('users')
     .select(
       `
-      id, organization_id, email, first_name, last_name, avatar_url,
-      position_title, is_active, last_login_at, created_at,
-      user_roles(role:roles(id, name, description, color, is_system))
+      *,
+      user_roles(role:roles(id, name, description, is_system, is_custom))
     `
     )
     .eq('organization_id', orgId)
@@ -238,10 +257,20 @@ export async function listTeamMembersAction(filters?: {
     }
   }
 
-  const withStats = (members || []).map((m) => ({
-    ...m,
-    active_task_count: taskCounts[m.id] || 0,
-  }));
+  // Aplanar los roles (many-to-many) y agregar stats
+  const withStats = (members || []).map((m) => {
+    const { user_roles, ...rest } = m as typeof m & {
+      user_roles: Array<{ role: unknown } | null> | null;
+    };
+    const roles = (user_roles || [])
+      .map((ur) => ur?.role)
+      .filter(Boolean);
+    return {
+      ...rest,
+      roles,
+      active_tasks_count: taskCounts[m.id] || 0,
+    };
+  });
 
   return { members: withStats };
 }
@@ -254,7 +283,7 @@ export async function createMemberDirectAction(payload: {
   email: string;
   first_name: string;
   last_name: string;
-  role_id: string;
+  role_ids: string[];
   temporary_password: string;
 }) {
   const ctx = await getContext();
@@ -274,14 +303,14 @@ export async function createMemberDirectAction(payload: {
 
   const email = validation.data.email.toLowerCase().trim();
 
-  // Validar rol
-  const { data: role } = await ctx.supabase
-    .from('roles')
-    .select('id, organization_id, is_system')
-    .eq('id', validation.data.role_id)
-    .maybeSingle();
-  if (!role || (role.organization_id !== orgId && !role.is_system)) {
-    return { error: 'El rol indicado no es válido para esta organización' };
+  // Validar todos los roles
+  const rolesOk = await validateRolesForOrg(
+    ctx.supabase,
+    orgId,
+    validation.data.role_ids
+  );
+  if (!rolesOk) {
+    return { error: 'Uno o más roles no son válidos para esta organización' };
   }
 
   // Email no debe existir en la org
@@ -329,11 +358,17 @@ export async function createMemberDirectAction(payload: {
     return { error: `Error al crear usuario: ${userError?.message}` };
   }
 
+  // Asignar todos los roles
   const { error: roleError } = await service
     .from('user_roles')
-    .insert({ user_id: newUser.id, role_id: validation.data.role_id });
+    .insert(
+      validation.data.role_ids.map((role_id) => ({
+        user_id: newUser.id,
+        role_id,
+      }))
+    );
   if (roleError) {
-    console.error('[createMemberDirect] Error asignando rol:', roleError);
+    console.error('[createMemberDirect] Error asignando roles:', roleError);
   }
 
   revalidatePath('/team');
@@ -348,7 +383,7 @@ export async function updateMemberAction(payload: {
   user_id: string;
   first_name?: string;
   last_name?: string;
-  role_id?: string;
+  role_ids?: string[];
 }) {
   const ctx = await getContext();
   if ('error' in ctx) return { error: ctx.error };
@@ -374,15 +409,13 @@ export async function updateMemberAction(payload: {
     return { error: 'Miembro no encontrado' };
   }
 
-  // Cambio de rol
-  if (validation.data.role_id) {
-    const { data: role } = await ctx.supabase
-      .from('roles')
-      .select('id, organization_id, is_system')
-      .eq('id', validation.data.role_id)
-      .maybeSingle();
-    if (!role || (role.organization_id !== orgId && !role.is_system)) {
-      return { error: 'El rol indicado no es válido para esta organización' };
+  // Cambio de roles (reemplazo completo)
+  if (validation.data.role_ids) {
+    const roleIds = validation.data.role_ids;
+
+    const rolesOk = await validateRolesForOrg(ctx.supabase, orgId, roleIds);
+    if (!rolesOk) {
+      return { error: 'Uno o más roles no son válidos para esta organización' };
     }
 
     // Proteger al último Director
@@ -392,7 +425,7 @@ export async function updateMemberAction(payload: {
       member.id,
       directorIds
     );
-    const willBeDirector = directorIds.includes(validation.data.role_id);
+    const willBeDirector = roleIds.some((id) => directorIds.includes(id));
 
     if (wasDirector && !willBeDirector) {
       const activeDirectors = await countActiveDirectors(
@@ -403,18 +436,18 @@ export async function updateMemberAction(payload: {
       if (activeDirectors <= 1) {
         return {
           error:
-            'No puedes quitar el rol al único Director activo. Asigna otro Director primero.',
+            'No puedes quitar el rol Director al único Director activo. Asigna otro Director primero.',
         };
       }
     }
 
-    const { error: roleError } = await setUserSingleRole(
+    const { error: roleError } = await setUserRoles(
       ctx.supabase,
       member.id,
-      validation.data.role_id
+      roleIds
     );
     if (roleError) {
-      return { error: `Error al cambiar el rol: ${roleError.message}` };
+      return { error: `Error al cambiar los roles: ${roleError.message}` };
     }
   }
 
