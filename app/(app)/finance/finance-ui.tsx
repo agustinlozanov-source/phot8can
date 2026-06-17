@@ -1,11 +1,91 @@
 // Helpers presentacionales del módulo Finanzas (sin hooks → server/client).
 
-import { Clock, CheckCircle2, AlertCircle, XCircle, Tag } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  Tag,
+  Home,
+  Briefcase,
+  Code,
+  Users,
+  Megaphone,
+  Cpu,
+  Coffee,
+  Plane,
+  Zap,
+  Receipt,
+  Landmark,
+  MoreHorizontal,
+  ShoppingCart,
+  Wrench,
+  FileText,
+  type LucideIcon,
+} from 'lucide-react';
 import type {
   InvoiceStatus,
   PaymentMethod,
   ExpenseStatus,
 } from '@/lib/types/database';
+
+// ============================================================
+// ICONOS DE CATEGORÍAS DE GASTO
+// ============================================================
+
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Home,
+  Briefcase,
+  Code,
+  Users,
+  Megaphone,
+  Cpu,
+  Coffee,
+  Plane,
+  Zap,
+  Receipt,
+  Landmark,
+  MoreHorizontal,
+  Tag,
+  ShoppingCart,
+  Wrench,
+  FileText,
+};
+
+export const CATEGORY_ICON_NAMES = Object.keys(CATEGORY_ICONS);
+
+export function CategoryIcon({
+  name,
+  size = 16,
+  className,
+}: {
+  name?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const Icon = name && CATEGORY_ICONS[name] ? CATEGORY_ICONS[name] : Tag;
+  return <Icon size={size} className={className} />;
+}
+
+// Swatches de color predefinidos (tailwind-ish) para el picker
+export const CATEGORY_COLORS = [
+  '#EF4444', // rojo
+  '#F97316', // naranja
+  '#E89A1F', // ámbar (brand)
+  '#EAB308', // amarillo
+  '#84CC16', // lima
+  '#22C55E', // verde
+  '#10B981', // esmeralda
+  '#14B8A6', // teal
+  '#06B6D4', // cian
+  '#3B82F6', // azul
+  '#6366F1', // índigo
+  '#8B5CF6', // violeta
+  '#A855F7', // púrpura
+  '#D946EF', // fucsia
+  '#EC4899', // rosa
+  '#6B7280', // gris
+];
 
 export function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('es-MX', {
@@ -108,14 +188,15 @@ export function ExpenseStatusBadge({ status }: { status: ExpenseStatus }) {
   );
 }
 
-// Badge de categoría con su color. El icon se pasa como nombre lucide pero
-// para evitar un mapa gigante usamos un punto de color + nombre (Tag fallback).
+// Badge de categoría con su color e icono real (lucide).
 export function CategoryBadge({
   name,
   color,
+  icon,
 }: {
   name: string | null;
   color?: string | null;
+  icon?: string | null;
 }) {
   if (!name) {
     return <span className="text-xs text-muted-foreground italic">Sin categoría</span>;
@@ -126,7 +207,7 @@ export function CategoryBadge({
       className="inline-flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded"
       style={{ background: `${c}1a`, color: c }}
     >
-      <Tag className="w-3 h-3" />
+      <CategoryIcon name={icon} size={12} />
       {name}
     </span>
   );

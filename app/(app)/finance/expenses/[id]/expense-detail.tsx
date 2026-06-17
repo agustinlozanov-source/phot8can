@@ -125,6 +125,7 @@ export function ExpenseDetail({ expense, canManage, canCancel }: Props) {
               <CategoryBadge
                 name={expense.category_name_snapshot}
                 color={expense.category?.color}
+                icon={expense.category?.icon}
               />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight">{expense.concept}</h1>
@@ -340,6 +341,7 @@ export function ExpenseDetail({ expense, canManage, canCancel }: Props) {
               <CategoryBadge
                 name={expense.category_name_snapshot}
                 color={expense.category?.color}
+                icon={expense.category?.icon}
               />
               <Link
                 href="/finance/categories"

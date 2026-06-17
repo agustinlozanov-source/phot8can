@@ -226,6 +226,7 @@ export function ExpensesList({
                       <CategoryBadge
                         name={e.category_name_snapshot}
                         color={e.category?.color}
+                        icon={e.category?.icon}
                       />
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-medium">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Receipt, TrendingDown } from 'lucide-react';
+import { Receipt, TrendingDown, Building2, Tag } from 'lucide-react';
 
 interface Props {
   canViewCobros: boolean;
@@ -11,6 +11,13 @@ interface Props {
 
 export function FinanceNav({ canViewCobros, canViewExpenses }: Props) {
   const pathname = usePathname();
+
+  // Rutas de gastos que NO son la lista principal (para resaltar bien cada tab)
+  const isExpensesSection =
+    pathname === '/finance/expenses' ||
+    pathname.startsWith('/finance/expenses/');
+  const isVendors = pathname.startsWith('/finance/vendors');
+  const isCategories = pathname.startsWith('/finance/categories');
 
   const tabs = [
     {
@@ -21,14 +28,30 @@ export function FinanceNav({ canViewCobros, canViewExpenses }: Props) {
       active:
         pathname === '/finance' ||
         (pathname.startsWith('/finance/') &&
-          !pathname.startsWith('/finance/expenses')),
+          !isExpensesSection &&
+          !isVendors &&
+          !isCategories),
     },
     {
       label: 'Gastos',
       href: '/finance/expenses',
       icon: TrendingDown,
       show: canViewExpenses,
-      active: pathname.startsWith('/finance/expenses'),
+      active: isExpensesSection,
+    },
+    {
+      label: 'Proveedores',
+      href: '/finance/vendors',
+      icon: Building2,
+      show: canViewExpenses,
+      active: isVendors,
+    },
+    {
+      label: 'Categorías',
+      href: '/finance/categories',
+      icon: Tag,
+      show: canViewExpenses,
+      active: isCategories,
     },
   ].filter((t) => t.show);
 
