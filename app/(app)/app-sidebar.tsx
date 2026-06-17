@@ -39,6 +39,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
         label: 'Dashboard',
         href: '/dashboard',
         icon: LayoutDashboard,
+        anyPermission: [
+          'clients.view',
+          'work_orders.view',
+          'finance.view',
+          'strategy.view',
+        ],
       },
       {
         label: 'Mis tareas',
