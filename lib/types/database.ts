@@ -3079,6 +3079,384 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // ORGANIZATION_CHANNELS (Módulo 14 Conversaciones)
+      // ============================================================
+      organization_channels: {
+        Row: {
+          id: string;
+          organization_id: string;
+          platform: 'whatsapp' | 'instagram' | 'facebook' | 'telegram' | 'sms';
+          zernio_profile_id: string;
+          zernio_account_id: string;
+          status: 'pending' | 'connected' | 'disconnected' | 'error';
+          display_name: string | null;
+          phone_number: string | null;
+          handle: string | null;
+          avatar_url: string | null;
+          metadata: Json | null;
+          last_error: string | null;
+          last_error_at: string | null;
+          connected_at: string | null;
+          disconnected_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          platform: 'whatsapp' | 'instagram' | 'facebook' | 'telegram' | 'sms';
+          zernio_profile_id: string;
+          zernio_account_id: string;
+          status?: 'pending' | 'connected' | 'disconnected' | 'error';
+          display_name?: string | null;
+          phone_number?: string | null;
+          handle?: string | null;
+          avatar_url?: string | null;
+          metadata?: Json | null;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          connected_at?: string | null;
+          disconnected_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['organization_channels']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'organization_channels_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'organization_channels_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // AGENT_SETTINGS (Módulo 14 Conversaciones)
+      // ============================================================
+      agent_settings: {
+        Row: {
+          id: string;
+          organization_id: string;
+          is_enabled: boolean;
+          auto_respond: boolean;
+          agent_name: string;
+          agent_personality: string | null;
+          language_register: string | null;
+          enable_contextual_intelligence: boolean;
+          hard_limits: string | null;
+          org_description: string | null;
+          org_services_summary: string | null;
+          org_process_summary: string | null;
+          human_contact_info: string | null;
+          changes_policy: string | null;
+          complaints_policy: string | null;
+          escalation_triggers: string | null;
+          upsell_policy: string | null;
+          collections_policy: string | null;
+          tools_enabled: Json;
+          context_message_history_limit: number;
+          last_trained_at: string | null;
+          last_trained_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          is_enabled?: boolean;
+          auto_respond?: boolean;
+          agent_name?: string;
+          agent_personality?: string | null;
+          language_register?: string | null;
+          enable_contextual_intelligence?: boolean;
+          hard_limits?: string | null;
+          org_description?: string | null;
+          org_services_summary?: string | null;
+          org_process_summary?: string | null;
+          human_contact_info?: string | null;
+          changes_policy?: string | null;
+          complaints_policy?: string | null;
+          escalation_triggers?: string | null;
+          upsell_policy?: string | null;
+          collections_policy?: string | null;
+          tools_enabled?: Json;
+          context_message_history_limit?: number;
+          last_trained_at?: string | null;
+          last_trained_by?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['agent_settings']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'agent_settings_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: true;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'agent_settings_last_trained_by_fkey';
+            columns: ['last_trained_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // CONVERSATIONS (Módulo 14 Conversaciones)
+      // ============================================================
+      conversations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          channel_id: string;
+          platform: 'whatsapp' | 'instagram' | 'facebook' | 'telegram' | 'sms';
+          remote_id: string;
+          remote_phone: string | null;
+          remote_handle: string | null;
+          remote_display_name: string | null;
+          remote_avatar_url: string | null;
+          client_id: string | null;
+          client_match_method: string | null;
+          status: 'open' | 'pending' | 'archived';
+          assigned_to_user_id: string | null;
+          agent_handles: boolean;
+          unread_count: number;
+          total_messages: number;
+          last_message_at: string | null;
+          last_message_preview: string | null;
+          last_message_direction: 'inbound' | 'outbound' | null;
+          last_inbound_at: string | null;
+          last_outbound_at: string | null;
+          archived_at: string | null;
+          archived_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          channel_id: string;
+          platform: 'whatsapp' | 'instagram' | 'facebook' | 'telegram' | 'sms';
+          remote_id: string;
+          remote_phone?: string | null;
+          remote_handle?: string | null;
+          remote_display_name?: string | null;
+          remote_avatar_url?: string | null;
+          client_id?: string | null;
+          client_match_method?: string | null;
+          status?: 'open' | 'pending' | 'archived';
+          assigned_to_user_id?: string | null;
+          agent_handles?: boolean;
+          unread_count?: number;
+          total_messages?: number;
+          last_message_at?: string | null;
+          last_message_preview?: string | null;
+          last_message_direction?: 'inbound' | 'outbound' | null;
+          last_inbound_at?: string | null;
+          last_outbound_at?: string | null;
+          archived_at?: string | null;
+          archived_by?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['conversations']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'conversations_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'conversations_channel_id_fkey';
+            columns: ['channel_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization_channels';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'conversations_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'conversations_assigned_to_user_id_fkey';
+            columns: ['assigned_to_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'conversations_archived_by_fkey';
+            columns: ['archived_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // MESSAGES (Módulo 14 Conversaciones)
+      // ============================================================
+      messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          organization_id: string;
+          zernio_message_id: string | null;
+          direction: 'inbound' | 'outbound';
+          sender_type: 'client' | 'user' | 'agent' | 'system';
+          sender_user_id: string | null;
+          content: string | null;
+          attachments: Json | null;
+          status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+          reply_to_message_id: string | null;
+          ai_metadata: Json | null;
+          sent_at: string | null;
+          delivered_at: string | null;
+          read_at: string | null;
+          failed_at: string | null;
+          failure_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          organization_id: string;
+          zernio_message_id?: string | null;
+          direction: 'inbound' | 'outbound';
+          sender_type: 'client' | 'user' | 'agent' | 'system';
+          sender_user_id?: string | null;
+          content?: string | null;
+          attachments?: Json | null;
+          status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+          reply_to_message_id?: string | null;
+          ai_metadata?: Json | null;
+          sent_at?: string | null;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          failed_at?: string | null;
+          failure_reason?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['messages']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'messages_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'conversations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'messages_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'messages_sender_user_id_fkey';
+            columns: ['sender_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'messages_reply_to_message_id_fkey';
+            columns: ['reply_to_message_id'];
+            isOneToOne: false;
+            referencedRelation: 'messages';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // CONVERSATION_EVENTS (Módulo 14 Conversaciones)
+      // ============================================================
+      conversation_events: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          organization_id: string;
+          event_type:
+            | 'channel_connected'
+            | 'conversation_opened'
+            | 'conversation_archived'
+            | 'conversation_assigned'
+            | 'message_escalated'
+            | 'agent_handover'
+            | 'system_note';
+          actor_user_id: string | null;
+          description: string | null;
+          metadata: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          organization_id: string;
+          event_type:
+            | 'channel_connected'
+            | 'conversation_opened'
+            | 'conversation_archived'
+            | 'conversation_assigned'
+            | 'message_escalated'
+            | 'agent_handover'
+            | 'system_note';
+          actor_user_id?: string | null;
+          description?: string | null;
+          metadata?: Json | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['conversation_events']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'conversation_events_conversation_id_fkey';
+            columns: ['conversation_id'];
+            isOneToOne: false;
+            referencedRelation: 'conversations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'conversation_events_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'conversation_events_actor_user_id_fkey';
+            columns: ['actor_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -3331,6 +3709,60 @@ export type VendorAddress = {
   state?: string;
   country?: string;
   postal_code?: string;
+};
+
+// Conversaciones
+export type OrganizationChannel = Database['public']['Tables']['organization_channels']['Row'];
+export type ChannelPlatform = Database['public']['Tables']['organization_channels']['Row']['platform'];
+export type ChannelStatus = Database['public']['Tables']['organization_channels']['Row']['status'];
+
+export type AgentSettings = Database['public']['Tables']['agent_settings']['Row'];
+
+export type Conversation = Database['public']['Tables']['conversations']['Row'];
+export type ConversationStatus = Database['public']['Tables']['conversations']['Row']['status'];
+
+export type Message = Database['public']['Tables']['messages']['Row'];
+export type MessageDirection = Database['public']['Tables']['messages']['Row']['direction'];
+export type MessageSenderType = Database['public']['Tables']['messages']['Row']['sender_type'];
+export type MessageStatus = Database['public']['Tables']['messages']['Row']['status'];
+
+export type ConversationEvent = Database['public']['Tables']['conversation_events']['Row'];
+export type ConversationEventType = Database['public']['Tables']['conversation_events']['Row']['event_type'];
+
+// Estructura de tools_enabled en agent_settings
+export type AgentToolsEnabled = {
+  view_strategy: boolean;
+  view_schedule: boolean;
+  view_work_orders: boolean;
+  view_invoices: boolean;
+  view_subscription: boolean;
+};
+
+// Estructura de attachments en messages
+export type MessageAttachment = {
+  type: 'image' | 'video' | 'audio' | 'document' | 'other';
+  url: string;
+  mime?: string;
+  name?: string;
+  size?: number;
+  duration_seconds?: number;
+};
+
+// Estructura de ai_metadata en messages
+export type MessageAIMetadata = {
+  model: string;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  duration_ms?: number;
+  tools_used?: string[];
+  escalation_suggested?: boolean;
+};
+
+// Conversation con relaciones (helper para listados)
+export type ConversationWithRelations = Conversation & {
+  channel?: { platform: ChannelPlatform; display_name: string | null } | null;
+  client?: { id: string; name: string; legal_name: string | null } | null;
+  assigned_to?: { id: string; first_name: string | null; last_name: string | null } | null;
 };
 
 // Estructura del JSONB contract_body
