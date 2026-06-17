@@ -2854,6 +2854,231 @@ export interface Database {
           }
         ];
       };
+
+      // ============================================================
+      // VENDORS (Módulo 10 Finanzas Nivel 2 — Gastos)
+      // ============================================================
+      vendors: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          legal_name: string | null;
+          tax_id: string | null;
+          email: string | null;
+          phone: string | null;
+          website: string | null;
+          address: Json | null;
+          notes: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          legal_name?: string | null;
+          tax_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          address?: Json | null;
+          notes?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['vendors']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'vendors_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'vendors_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // EXPENSE_CATEGORIES (Módulo 10 Finanzas Nivel 2 — Gastos)
+      // ============================================================
+      expense_categories: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          description: string | null;
+          color: string;
+          icon: string | null;
+          parent_category_id: string | null;
+          position: number;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          name: string;
+          description?: string | null;
+          color?: string;
+          icon?: string | null;
+          parent_category_id?: string | null;
+          position?: number;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['expense_categories']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'expense_categories_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expense_categories_parent_category_id_fkey';
+            columns: ['parent_category_id'];
+            isOneToOne: false;
+            referencedRelation: 'expense_categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expense_categories_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // EXPENSES (Módulo 10 Finanzas Nivel 2 — Gastos)
+      // ============================================================
+      expenses: {
+        Row: {
+          id: string;
+          organization_id: string;
+          folio: string;
+          vendor_id: string | null;
+          vendor_name_snapshot: string;
+          category_id: string | null;
+          category_name_snapshot: string | null;
+          concept: string;
+          description: string | null;
+          status: 'pending' | 'paid' | 'cancelled';
+          subtotal: number;
+          taxes: number;
+          total: number;
+          currency: string;
+          issue_date: string;
+          due_date: string | null;
+          paid_at: string | null;
+          paid_amount: number | null;
+          payment_method:
+            | 'transfer'
+            | 'cash'
+            | 'card'
+            | 'check'
+            | 'other'
+            | null;
+          reference: string | null;
+          receipt_url: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          cancellation_reason: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          folio: string;
+          vendor_id?: string | null;
+          vendor_name_snapshot: string;
+          category_id?: string | null;
+          category_name_snapshot?: string | null;
+          concept: string;
+          description?: string | null;
+          status?: 'pending' | 'paid' | 'cancelled';
+          subtotal: number;
+          taxes?: number;
+          total: number;
+          currency?: string;
+          issue_date: string;
+          due_date?: string | null;
+          paid_at?: string | null;
+          paid_amount?: number | null;
+          payment_method?:
+            | 'transfer'
+            | 'cash'
+            | 'card'
+            | 'check'
+            | 'other'
+            | null;
+          reference?: string | null;
+          receipt_url?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancellation_reason?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['expenses']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'expenses_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expenses_vendor_id_fkey';
+            columns: ['vendor_id'];
+            isOneToOne: false;
+            referencedRelation: 'vendors';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expenses_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'expense_categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expenses_cancelled_by_fkey';
+            columns: ['cancelled_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expenses_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -2944,6 +3169,18 @@ export interface Database {
       };
       mark_overdue_invoices: {
         Args: Record<string, never>;
+        Returns: number;
+      };
+      generate_expense_folio: {
+        Args: {
+          p_organization_id: string;
+        };
+        Returns: string;
+      };
+      seed_default_expense_categories: {
+        Args: {
+          p_organization_id: string;
+        };
         Returns: number;
       };
     };
@@ -3079,6 +3316,22 @@ export type InvoiceSource = Database['public']['Tables']['invoices']['Row']['sou
 
 export type Payment = Database['public']['Tables']['payments']['Row'];
 export type PaymentMethod = Database['public']['Tables']['payments']['Row']['payment_method'];
+
+// Finanzas Nivel 2 — Gastos
+export type Vendor = Database['public']['Tables']['vendors']['Row'];
+export type ExpenseCategory = Database['public']['Tables']['expense_categories']['Row'];
+
+export type Expense = Database['public']['Tables']['expenses']['Row'];
+export type ExpenseStatus = Database['public']['Tables']['expenses']['Row']['status'];
+
+// Estructura del address en vendors
+export type VendorAddress = {
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+};
 
 // Estructura del JSONB contract_body
 export type ContractBody = {
