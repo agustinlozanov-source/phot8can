@@ -232,10 +232,26 @@ export async function handleMessageReceived(payload: ZernioWebhookPayload) {
     `[ZernioWebhook] Mensaje entrante guardado en conversación ${conversationId}`
   );
 
-  // f) Disparar el agente IA (cuando exista el runtime)
-  // TODO(14.7): consultar conversation.agent_handles + agent_settings
-  //   (is_enabled, auto_respond) y, si aplica, disparar asincrónicamente:
-  //   runAgentForConversation(conversationId).catch(console.error);
+  // f) Disparar el agente IA si la conversación lo permite y el agente
+  //    está activo con auto_respond. El runner revalida todo internamente.
+  const { data: settings } = await supabase
+    .from('agent_settings')
+    .select('is_enabled, auto_respond')
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
+  if (settings?.is_enabled && settings.auto_respond) {
+    const { runAgentForConversation } = await import('@/lib/agent-runner');
+    // Fire-and-forget: no bloqueamos la respuesta 200 al webhook.
+    // NOTA: en entornos serverless conviene moverlo a una background function
+    // si se requiere garantía de ejecución tras el response.
+    runAgentForConversation(conversationId, {
+      mode: 'auto',
+      triggered_by: 'webhook',
+    }).catch((err) =>
+      console.error('[ZernioWebhook] runAgent error:', err)
+    );
+  }
 }
 
 // ============================================================
