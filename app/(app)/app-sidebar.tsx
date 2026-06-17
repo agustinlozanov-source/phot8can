@@ -120,7 +120,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
         label: 'Finanzas',
         href: '/finance',
         icon: Receipt,
-        requiredPermission: 'finance.view',
+        anyPermission: ['finance.view', 'expenses.view', 'finance.view_reports'],
       },
       {
         label: 'Equipo',

@@ -1,7 +1,11 @@
 // Helpers presentacionales del módulo Finanzas (sin hooks → server/client).
 
-import { Clock, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
-import type { InvoiceStatus, PaymentMethod } from '@/lib/types/database';
+import { Clock, CheckCircle2, AlertCircle, XCircle, Tag } from 'lucide-react';
+import type {
+  InvoiceStatus,
+  PaymentMethod,
+  ExpenseStatus,
+} from '@/lib/types/database';
 
 export function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('es-MX', {
@@ -63,6 +67,67 @@ export function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
     >
       <Icon className="w-3 h-3" />
       {label}
+    </span>
+  );
+}
+
+// ============================================================
+// GASTOS
+// ============================================================
+
+export const EXPENSE_STATUS_META: Record<
+  ExpenseStatus,
+  { label: string; Icon: React.ElementType; bg: string }
+> = {
+  pending: {
+    label: 'Pendiente',
+    Icon: Clock,
+    bg: 'bg-photocan-amber/10 text-photocan-amber-deep',
+  },
+  paid: {
+    label: 'Pagado',
+    Icon: CheckCircle2,
+    bg: 'bg-green-500/10 text-green-500',
+  },
+  cancelled: {
+    label: 'Cancelado',
+    Icon: XCircle,
+    bg: 'bg-muted text-muted-foreground',
+  },
+};
+
+export function ExpenseStatusBadge({ status }: { status: ExpenseStatus }) {
+  const { label, Icon, bg } = EXPENSE_STATUS_META[status];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded ${bg}`}
+    >
+      <Icon className="w-3 h-3" />
+      {label}
+    </span>
+  );
+}
+
+// Badge de categoría con su color. El icon se pasa como nombre lucide pero
+// para evitar un mapa gigante usamos un punto de color + nombre (Tag fallback).
+export function CategoryBadge({
+  name,
+  color,
+}: {
+  name: string | null;
+  color?: string | null;
+}) {
+  if (!name) {
+    return <span className="text-xs text-muted-foreground italic">Sin categoría</span>;
+  }
+  const c = color || '#6B7280';
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded"
+      style={{ background: `${c}1a`, color: c }}
+    >
+      <Tag className="w-3 h-3" />
+      {name}
     </span>
   );
 }

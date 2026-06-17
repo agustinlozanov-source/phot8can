@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getActiveContext, hasPermission } from '@/lib/auth/context';
 import { listInvoicesAction } from '@/lib/actions/invoices';
 import { InvoicesList } from './invoices-list';
+import { FinanceNav } from './finance-nav';
 import { formatCurrency } from './finance-ui';
 
 export default async function FinancePage() {
@@ -84,6 +85,11 @@ export default async function FinancePage() {
           Cobros a clientes — facturas internas y registro de pagos
         </p>
       </div>
+
+      <FinanceNav
+        canViewCobros
+        canViewExpenses={hasPermission(ctx, 'expenses.view')}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
