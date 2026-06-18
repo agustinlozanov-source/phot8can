@@ -3,6 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/types/database';
 
 export async function updateSession(request: NextRequest) {
+  // Rutas de integración con terceros (Zernio): webhooks y callbacks OAuth.
+  // Son públicas por diseño — Zernio no tiene sesión de usuario. Si pasaran por
+  // el flujo de auth, el middleware redirigiría a /login (307) y el webhook
+  // nunca llegaría al handler. Salida temprana ANTES de tocar la sesión.
+  if (request.nextUrl.pathname.startsWith('/api/zernio/')) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

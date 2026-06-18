@@ -14,8 +14,9 @@ export const config = {
      * - favicon.ico
      * - .netlify/* (background functions)
      * - api/interview/* (public interview endpoints)
+     * - api/zernio/* (webhooks y callbacks OAuth de Zernio, públicos por diseño)
      * - public files (images, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|\\.netlify|api/interview|api/contracts|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm|ogg|mov|woff|woff2|ttf|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|\\.netlify|api/interview|api/contracts|api/zernio|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm|ogg|mov|woff|woff2|ttf|ico)$).*)',
   ],
 };
