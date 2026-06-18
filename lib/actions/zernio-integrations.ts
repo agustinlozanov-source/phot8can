@@ -1,10 +1,25 @@
 'use server';
 
+import crypto from 'crypto';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { zernioFetch } from '@/lib/zernio-client';
-import type { ChannelPlatform } from '@/lib/types/database';
+import type { Database, ChannelPlatform } from '@/lib/types/database';
+
+// Eventos a los que nos suscribimos en el webhook de Zernio
+const WEBHOOK_EVENTS = [
+  'message.received',
+  'message.sent',
+  'message.delivered',
+  'message.read',
+  'message.failed',
+  'conversation.started',
+  'account.connected',
+  'account.disconnected',
+  'whatsapp.number.activated',
+];
 
 // ============================================================
 // CONSTANTES / SCHEMAS
@@ -145,6 +160,76 @@ async function ensureProfile(
 }
 
 // ============================================================
+// HELPER INTERNO: asegurar webhook por organización
+// ============================================================
+// Cada org tiene su propio webhook en Zernio, con su propio secret aleatorio.
+// Esto aísla la verificación de firma por org (el secret no se comparte).
+// Se llama al iniciar la conexión de un canal (cuando ya hay profileId).
+
+async function ensureWebhookForOrg(
+  sb: SupabaseClient<Database>,
+  orgId: string,
+  profileId: string
+): Promise<{ webhookId: string; secret: string } | { error: string }> {
+  const { data: org } = await sb
+    .from('organizations')
+    .select('zernio_webhook_id, zernio_webhook_secret')
+    .eq('id', orgId)
+    .maybeSingle();
+
+  if (org?.zernio_webhook_id && org?.zernio_webhook_secret) {
+    return { webhookId: org.zernio_webhook_id, secret: org.zernio_webhook_secret };
+  }
+
+  const secret = crypto.randomBytes(32).toString('hex');
+  const url = `${appUrl()}/api/zernio/webhook`;
+
+  try {
+    // POST /v1/webhooks → registra el webhook para esta org/profile
+    const res = await zernioFetch<{
+      webhook?: { _id?: string; id?: string };
+      _id?: string;
+      id?: string;
+    }>('/webhooks', {
+      method: 'POST',
+      body: JSON.stringify({
+        url,
+        events: WEBHOOK_EVENTS,
+        secret,
+        profileId,
+      }),
+    });
+
+    const webhookId =
+      res.webhook?._id || res.webhook?.id || res._id || res.id || null;
+    if (!webhookId) {
+      return { error: 'Zernio no devolvió un webhook válido' };
+    }
+
+    const update: Database['public']['Tables']['organizations']['Update'] = {
+      zernio_webhook_id: webhookId,
+      zernio_webhook_secret: secret,
+    };
+    const { error: updateError } = await sb
+      .from('organizations')
+      .update(update)
+      .eq('id', orgId);
+    if (updateError) {
+      console.error('[Zernio] Error guardando webhook:', updateError);
+      return { error: 'No se pudo guardar el webhook de Zernio' };
+    }
+
+    console.log(`[Zernio] Webhook ${webhookId} registrado para org ${orgId}`);
+    return { webhookId, secret };
+  } catch (err) {
+    console.error('[Zernio] ensureWebhookForOrg error:', err);
+    return {
+      error: err instanceof Error ? err.message : 'Error al registrar webhook',
+    };
+  }
+}
+
+// ============================================================
 // 1. ASEGURAR PROFILE (acción pública)
 // ============================================================
 
@@ -193,6 +278,13 @@ export async function startChannelConnectionAction(payload: {
   if ('error' in profileRes) return { error: profileRes.error };
   const profileId = profileRes.profileId;
 
+  // 1b. Asegurar webhook por org (idempotente). No bloquea la conexión si falla,
+  // pero sin webhook no llegarían los mensajes entrantes — lo registramos.
+  const webhookRes = await ensureWebhookForOrg(ctx.supabase, orgId, profileId);
+  if ('error' in webhookRes) {
+    console.error('[Zernio] No se pudo asegurar webhook:', webhookRes.error);
+  }
+
   // 2. No permitir un segundo canal conectado del mismo platform
   const { data: existing } = await ctx.supabase
     .from('organization_channels')
@@ -207,7 +299,10 @@ export async function startChannelConnectionAction(payload: {
   }
 
   // 3. Pedir authUrl a Zernio
-  const redirectUrl = `${appUrl()}/api/zernio/callback?org_id=${orgId}&platform=${platform}`;
+  // Zernio devuelve en el callback ?connected=...&profileId=...&accountId=...
+  // (NO incluye org_id). Resolvemos la org por profileId en el callback, así que
+  // el redirect_url no necesita llevar org_id.
+  const redirectUrl = `${appUrl()}/api/zernio/callback?platform=${platform}`;
   let authUrl: string;
   try {
     const res = await zernioFetch<{ authUrl: string }>(
@@ -249,7 +344,7 @@ export async function startChannelConnectionAction(payload: {
 // ============================================================
 
 export async function completeChannelConnectionAction(payload: {
-  org_id: string;
+  profile_id: string;
   platform: string;
   account_id: string;
   account_data?: {
@@ -264,11 +359,26 @@ export async function completeChannelConnectionAction(payload: {
   // Sin sesión de usuario → service client (bypass RLS)
   const supabase = await createServiceClient();
 
+  // Resolver la org por profileId (Zernio no devuelve org_id en el callback)
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('zernio_profile_id', payload.profile_id)
+    .maybeSingle();
+
+  if (!org) {
+    console.error(
+      `[Zernio] completeChannelConnection: sin org para profileId ${payload.profile_id}`
+    );
+    return { error: 'No se encontró la organización del profile de Zernio' };
+  }
+  const orgId = org.id;
+
   // Buscar el canal pending de esa org + platform (el más reciente)
   const { data: channel } = await supabase
     .from('organization_channels')
     .select('id')
-    .eq('organization_id', payload.org_id)
+    .eq('organization_id', orgId)
     .eq('platform', payload.platform as ChannelPlatform)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
@@ -277,7 +387,7 @@ export async function completeChannelConnectionAction(payload: {
 
   if (!channel) {
     console.error(
-      `[Zernio] completeChannelConnection: sin canal pending para ${payload.org_id}/${payload.platform}`
+      `[Zernio] completeChannelConnection: sin canal pending para ${orgId}/${payload.platform}`
     );
     return { error: 'No hay un canal pendiente para completar' };
   }
@@ -307,7 +417,7 @@ export async function completeChannelConnectionAction(payload: {
   // Crear agent_settings inicial si la org aún no tiene (UNIQUE por org)
   await supabase
     .from('agent_settings')
-    .insert({ organization_id: payload.org_id })
+    .insert({ organization_id: orgId })
     .select('id')
     .maybeSingle();
   // (si ya existe, el UNIQUE lo rechaza silenciosamente — lo ignoramos)
@@ -317,7 +427,7 @@ export async function completeChannelConnectionAction(payload: {
   // mover a una tabla de eventos de canal si se necesita auditoría.
 
   console.log(
-    `[Zernio] Canal ${channel.id} conectado (${payload.platform}) para org ${payload.org_id}`
+    `[Zernio] Canal ${channel.id} conectado (${payload.platform}) para org ${orgId}`
   );
 
   revalidatePath('/settings/integrations');

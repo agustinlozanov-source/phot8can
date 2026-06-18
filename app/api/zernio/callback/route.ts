@@ -13,14 +13,21 @@ function settingsUrl(req: NextRequest, params: string): string {
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
-    const orgId = sp.get('org_id');
-    const platform = sp.get('platform');
-    const accountId = sp.get('account_id');
+    // Zernio devuelve: ?connected=whatsapp&profileId=xxx&accountId=xxx&username=...
+    // (NO incluye org_id; lo resolvemos por profileId). `platform` también puede
+    // venir como el param que nosotros mandamos en el redirect_url.
+    const platform = sp.get('connected') || sp.get('platform');
+    const profileId = sp.get('profileId') || sp.get('profile_id');
+    const accountId = sp.get('accountId') || sp.get('account_id');
+    const username = sp.get('username');
+    const displayName = sp.get('display_name') || sp.get('name');
+    const phoneNumber = sp.get('phone_number') || sp.get('phone');
+    const avatarUrl = sp.get('avatar_url') || sp.get('avatar');
     const accountDataRaw = sp.get('account_data');
 
-    if (!orgId || !platform || !accountId) {
+    if (!profileId || !platform || !accountId) {
       console.error('[ZernioCallback] Parámetros faltantes', {
-        orgId,
+        profileId,
         platform,
         accountId,
       });
@@ -29,6 +36,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // account_data: preferimos el JSON si viene, si no lo armamos con los params sueltos
     let accountData: Record<string, unknown> | undefined;
     if (accountDataRaw) {
       try {
@@ -37,9 +45,16 @@ export async function GET(req: NextRequest) {
         console.warn('[ZernioCallback] account_data no es JSON válido');
       }
     }
+    if (!accountData) {
+      accountData = {};
+      if (username) accountData.username = username;
+      if (displayName) accountData.display_name = displayName;
+      if (phoneNumber) accountData.phone_number = phoneNumber;
+      if (avatarUrl) accountData.avatar_url = avatarUrl;
+    }
 
     const result = await completeChannelConnectionAction({
-      org_id: orgId,
+      profile_id: profileId,
       platform,
       account_id: accountId,
       account_data: accountData,
@@ -53,7 +68,7 @@ export async function GET(req: NextRequest) {
     }
 
     console.log(
-      `[ZernioCallback] Canal ${platform} conectado para org ${orgId}`
+      `[ZernioCallback] Canal ${platform} conectado (profile ${profileId})`
     );
     return NextResponse.redirect(
       settingsUrl(req, `connected=1&platform=${encodeURIComponent(platform)}`)

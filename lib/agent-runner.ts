@@ -6,8 +6,8 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { buildAgentPrompt } from '@/lib/agent-prompt-builder';
 import { zernioFetch } from '@/lib/zernio-client';
 import type { Database } from '@/lib/types/database';
@@ -17,6 +17,33 @@ type SB = SupabaseClient<Database>;
 const AGENT_MODEL = 'claude-sonnet-4-6';
 const MAX_AGENT_TOKENS = 4096;
 const MAX_TOOL_ROUNDS = 5;
+
+// ============================================================
+// CLIENTE SUPABASE DIRECTO (sin next/headers)
+// ============================================================
+// Permite importar este módulo desde server actions Y desde la Netlify
+// background function (que no puede resolver next/headers).
+
+function createServiceClientDirect(): SB {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      realtime: {
+        params: { eventsPerSecond: 0 },
+        transport: ws as unknown as typeof WebSocket,
+      },
+      global: {
+        headers: { 'x-application-name': 'photocan-agent-runner' },
+      },
+    }
+  );
+}
 
 const WO_ACTIVE = ['pending', 'in_production', 'review', 'ready'] as const;
 const ESCALATION_HINTS = [
@@ -260,7 +287,7 @@ export async function runAgentForConversation(
   const startTime = Date.now();
 
   try {
-    const sb = await createServiceClient();
+    const sb = createServiceClientDirect();
 
     // 1-2. Cargar conversación
     const { data: conversation } = await sb
@@ -428,6 +455,13 @@ export async function runAgentForConversation(
           .eq('id', message.id);
       } else {
         try {
+          // NOTA WhatsApp 24h: WhatsApp solo permite enviar mensajes de texto
+          // libre dentro de las 24h posteriores al último mensaje entrante del
+          // cliente. Fuera de esa ventana, la API devuelve el error 131047
+          // ("Re-engagement message") y se requiere una plantilla aprobada.
+          // El agente IA solo se dispara por mensajes entrantes (webhook), así
+          // que normalmente está dentro de la ventana; si aun así Zernio
+          // rechaza por 131047, el catch de abajo marca el mensaje como failed.
           const res = await zernioFetch<{
             message?: { id?: string; _id?: string };
             id?: string;

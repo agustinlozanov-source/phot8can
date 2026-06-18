@@ -320,7 +320,9 @@ export async function sendMessageAction(payload: {
 
   const { data: conversation } = await ctx.supabase
     .from('conversations')
-    .select('id, organization_id, zernio_conversation_id')
+    .select(
+      'id, organization_id, platform, zernio_conversation_id, last_inbound_at'
+    )
     .eq('id', validation.data.conversation_id)
     .maybeSingle();
 
@@ -329,6 +331,22 @@ export async function sendMessageAction(payload: {
   }
   if (!conversation.zernio_conversation_id) {
     return { error: 'Esta conversación no tiene ID de Zernio asociado' };
+  }
+
+  // Regla de las 24h de WhatsApp: solo se puede responder con texto libre
+  // dentro de las 24h posteriores al último mensaje entrante del cliente.
+  // Fuera de esa ventana WhatsApp exige una plantilla aprobada (error 131047).
+  if (conversation.platform === 'whatsapp') {
+    const lastInbound = conversation.last_inbound_at
+      ? new Date(conversation.last_inbound_at).getTime()
+      : null;
+    const windowMs = 24 * 60 * 60 * 1000;
+    if (!lastInbound || Date.now() - lastInbound > windowMs) {
+      return {
+        error:
+          'Esta conversación está fuera del rango de 24h de WhatsApp. Para reabrirla necesitas que el cliente escriba de nuevo o enviar una plantilla aprobada.',
+      };
+    }
   }
 
   // 1. Guardar el mensaje pending

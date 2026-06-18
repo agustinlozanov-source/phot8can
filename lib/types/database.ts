@@ -40,6 +40,8 @@ export interface Database {
           secondary_color: string | null;
           email_settings: Json | null;
           zernio_profile_id: string | null;
+          zernio_webhook_id: string | null;
+          zernio_webhook_secret: string | null;
           is_active: boolean;
           created_by: string | null;
           created_at: string;
@@ -62,6 +64,8 @@ export interface Database {
           secondary_color?: string | null;
           email_settings?: Json | null;
           zernio_profile_id?: string | null;
+          zernio_webhook_id?: string | null;
+          zernio_webhook_secret?: string | null;
           is_active?: boolean;
           created_by?: string | null;
         };
@@ -3457,6 +3461,42 @@ export interface Database {
             columns: ['actor_user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ============================================================
+      // ZERNIO_WEBHOOK_EVENTS (idempotencia + audit de webhooks)
+      // ============================================================
+      zernio_webhook_events: {
+        Row: {
+          event_id: string;
+          organization_id: string | null;
+          event_type: string;
+          payload: Json;
+          received_at: string;
+          processed_at: string | null;
+          error_message: string | null;
+        };
+        Insert: {
+          event_id: string;
+          organization_id?: string | null;
+          event_type: string;
+          payload: Json;
+          received_at?: string;
+          processed_at?: string | null;
+          error_message?: string | null;
+        };
+        Update: Partial<
+          Database['public']['Tables']['zernio_webhook_events']['Insert']
+        >;
+        Relationships: [
+          {
+            foreignKeyName: 'zernio_webhook_events_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
             referencedColumns: ['id'];
           }
         ];
