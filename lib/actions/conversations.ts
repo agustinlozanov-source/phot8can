@@ -490,6 +490,29 @@ export async function markConversationAsReadAction(conversationId: string) {
   return { success: true };
 }
 
+export async function markConversationAsUnreadAction(conversationId: string) {
+  const ctx = await getContext();
+  if ('error' in ctx) return { error: ctx.error };
+
+  if (!(await checkPermission('conversations.view'))) {
+    return { error: 'No tienes permiso para ver conversaciones' };
+  }
+
+  const orgId = resolveOrgId(ctx);
+  if (!orgId) return { error: 'No se pudo determinar la organización' };
+
+  const { error } = await ctx.supabase
+    .from('conversations')
+    .update({ unread_count: 1 })
+    .eq('id', conversationId)
+    .eq('organization_id', orgId);
+
+  if (error) return { error: `Error: ${error.message}` };
+
+  revalidatePath('/conversations');
+  return { success: true };
+}
+
 // ============================================================
 // 7. ASIGNAR CONVERSACIÓN
 // ============================================================
@@ -809,6 +832,50 @@ export async function getUnreadCountAction() {
     .neq('status', 'archived');
 
   return { count: count ?? 0 };
+}
+
+// ============================================================
+// 14b. BUSCAR CLIENTES (para el modal de asociación)
+// ============================================================
+
+export async function searchClientsForConversationAction(query: string) {
+  const ctx = await getContext();
+  if ('error' in ctx) return { error: ctx.error };
+
+  if (!(await checkPermission('conversations.manage'))) {
+    return { error: 'No tienes permiso para gestionar conversaciones' };
+  }
+
+  const orgId = resolveOrgId(ctx);
+  if (!orgId) return { error: 'No se pudo determinar la organización' };
+
+  let q = ctx.supabase
+    .from('clients')
+    .select(
+      'id, name, legal_name, contacts(phone, is_primary)'
+    )
+    .eq('organization_id', orgId);
+
+  const term = query.trim();
+  if (term) q = q.ilike('name', `%${term}%`);
+
+  const { data, error } = await q.order('name').limit(10);
+  if (error) return { error: `Error al buscar clientes: ${error.message}` };
+
+  const clients = (data || []).map((c) => {
+    const contacts = (c.contacts as unknown as
+      | { phone: string | null; is_primary: boolean }[]
+      | null) ?? [];
+    const primary = contacts.find((ct) => ct.is_primary) ?? contacts[0];
+    return {
+      id: c.id,
+      name: c.name,
+      legal_name: c.legal_name,
+      phone: primary?.phone ?? null,
+    };
+  });
+
+  return { clients };
 }
 
 // ============================================================
