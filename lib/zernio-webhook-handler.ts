@@ -1,12 +1,45 @@
 /**
  * Procesamiento de webhooks entrantes de Zernio.
- * NO es server action — lo invoca el route handler /api/zernio/webhook.
- * Usa createServiceClient porque el webhook no tiene sesión de usuario.
+ * Lógica pura: NO 'use server', NO next/*. Se importa desde el route handler
+ * Y desde la Netlify Background Function (process-webhook-background), por eso
+ * usa un cliente service-role directo (sin next/headers).
  */
 
 import crypto from 'crypto';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import type { Database } from '@/lib/types/database';
+
+// ============================================================
+// CLIENTE SUPABASE DIRECTO (sin next/headers)
+// ============================================================
+
+function createServiceClientDirect(): SupabaseClient<Database> {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      realtime: {
+        params: { eventsPerSecond: 0 },
+        transport: ws as unknown as typeof WebSocket,
+      },
+      global: {
+        headers: { 'x-application-name': 'photocan-webhook-handler' },
+      },
+    }
+  );
+}
+
+// Wrapper async para conservar la firma `await createServiceClient()` en todo
+// el archivo (el webhook no tiene sesión de usuario).
+async function createServiceClient(): Promise<SupabaseClient<Database>> {
+  return createServiceClientDirect();
+}
 
 // ============================================================
 // TIPOS DEL PAYLOAD DE ZERNIO
@@ -699,5 +732,75 @@ export async function handleWhatsappNumberActivated(
       '[ZernioWebhook] Error en whatsapp.number.activated:',
       error.message
     );
+  }
+}
+
+// ============================================================
+// ORQUESTADOR: procesar un evento del webhook
+// ============================================================
+// Antes vivía en el route handler como fire-and-forget, pero Netlify cortaba
+// la promise flotante tras el response. Ahora lo invoca la Background Function
+// process-webhook-background (15min de timeout, ejecución garantizada).
+
+export async function processWebhookEvent(
+  payload: ZernioWebhookPayload,
+  eventId: string | null
+) {
+  if (!payload.event) return;
+
+  // Idempotencia por event_id (header X-Zernio-Event-Id o payload.id).
+  const id = eventId || payload.id || null;
+  if (id) {
+    const claim = await claimWebhookEvent(id, payload.event, payload);
+    if (claim.alreadyProcessed) {
+      console.log(`[ZernioWebhook] Evento ${id} ya procesado — skip`);
+      return;
+    }
+  } else {
+    console.warn(
+      '[ZernioWebhook] Evento sin id — no se puede deduplicar, se procesa igual'
+    );
+  }
+
+  let handlerError: string | null = null;
+  try {
+    switch (payload.event) {
+      case 'message.received':
+        await handleMessageReceived(payload);
+        break;
+      case 'message.sent':
+        await handleMessageStatusUpdate(payload, 'sent');
+        break;
+      case 'message.delivered':
+        await handleMessageStatusUpdate(payload, 'delivered');
+        break;
+      case 'message.read':
+        await handleMessageStatusUpdate(payload, 'read');
+        break;
+      case 'message.failed':
+        await handleMessageFailed(payload);
+        break;
+      case 'conversation.started':
+        await handleConversationStarted(payload);
+        break;
+      case 'account.connected':
+        await handleAccountConnected(payload);
+        break;
+      case 'account.disconnected':
+        await handleAccountDisconnected(payload);
+        break;
+      case 'whatsapp.number.activated':
+        await handleWhatsappNumberActivated(payload);
+        break;
+      default:
+        console.log('[ZernioWebhook] Evento no manejado:', payload.event);
+    }
+  } catch (err) {
+    handlerError = err instanceof Error ? err.message : 'Error procesando';
+    console.error('[ZernioWebhook] Error en handler:', err);
+  }
+
+  if (id) {
+    await markWebhookEventProcessed(id, handlerError);
   }
 }
