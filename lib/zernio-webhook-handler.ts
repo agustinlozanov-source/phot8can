@@ -47,7 +47,11 @@ interface ZernioWebhookPayload {
     status?: string;
   };
   account?: {
-    id: string;
+    // Zernio usa "accountId" (no "id") en el payload real. Dejamos "id" como
+    // fallback por compatibilidad histórica.
+    accountId?: string;
+    id?: string;
+    profileId?: string;
     platform?: string;
     username?: string;
     displayName?: string;
@@ -56,6 +60,12 @@ interface ZernioWebhookPayload {
 }
 
 type ServiceClient = Awaited<ReturnType<typeof createServiceClient>>;
+
+// Lee el id de cuenta del payload real de Zernio (account.accountId), con
+// fallback al antiguo account.id.
+function accountIdOf(payload: ZernioWebhookPayload): string | null {
+  return payload.account?.accountId || payload.account?.id || null;
+}
 
 // ============================================================
 // HELPER: resolver organización por account de Zernio
@@ -83,7 +93,7 @@ async function resolveOrgByAccount(
 export async function resolveWebhookSecret(
   payload: ZernioWebhookPayload
 ): Promise<string | null> {
-  const accountId = payload.account?.id;
+  const accountId = accountIdOf(payload);
   if (accountId) {
     const supabase = await createServiceClient();
     const orgId = await resolveOrgByAccount(supabase, accountId);
@@ -154,7 +164,7 @@ export async function claimWebhookEvent(
   payload: ZernioWebhookPayload
 ): Promise<{ alreadyProcessed: boolean; orgId: string | null }> {
   const supabase = await createServiceClient();
-  const orgId = await resolveOrgByAccount(supabase, payload.account?.id);
+  const orgId = await resolveOrgByAccount(supabase, accountIdOf(payload));
 
   const insert: Database['public']['Tables']['zernio_webhook_events']['Insert'] =
     {
@@ -273,7 +283,7 @@ async function matchClientByPhone(
 export async function handleMessageReceived(payload: ZernioWebhookPayload) {
   const supabase = await createServiceClient();
 
-  const accountId = payload.account?.id;
+  const accountId = accountIdOf(payload);
   const msg = payload.message;
   const conv = payload.conversation;
 
@@ -505,7 +515,7 @@ export async function handleMessageFailed(payload: ZernioWebhookPayload) {
 export async function handleConversationStarted(payload: ZernioWebhookPayload) {
   const supabase = await createServiceClient();
 
-  const accountId = payload.account?.id;
+  const accountId = accountIdOf(payload);
   const conv = payload.conversation;
   if (!accountId || !conv?.id) {
     console.warn('[ZernioWebhook] conversation.started con payload incompleto');
@@ -568,35 +578,81 @@ export async function handleConversationStarted(payload: ZernioWebhookPayload) {
 export async function handleAccountConnected(payload: ZernioWebhookPayload) {
   const supabase = await createServiceClient();
   const account = payload.account;
-  if (!account?.id) return;
+  const accountId = accountIdOf(payload);
+  const profileId = account?.profileId;
 
-  const update: Database['public']['Tables']['organization_channels']['Update'] =
-    {
-      status: 'connected',
-      connected_at: new Date().toISOString(),
-      last_error: null,
-      last_error_at: null,
-    };
-  if (account.displayName) update.display_name = account.displayName;
-  if (account.username) update.handle = account.username;
-  if (account.phoneNumber) update.phone_number = account.phoneNumber;
+  if (!accountId || !profileId) {
+    console.warn(
+      '[ZernioWebhook] account.connected sin accountId/profileId — skip'
+    );
+    return;
+  }
+
+  // a) Resolver la org por profileId
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('zernio_profile_id', profileId)
+    .maybeSingle();
+
+  if (!org) {
+    console.warn(
+      `[ZernioWebhook] account.connected: profile ${profileId} no asociado a ninguna org — skip`
+    );
+    return;
+  }
+
+  const platform = (account?.platform as
+    | Database['public']['Tables']['organization_channels']['Insert']['platform']
+    | undefined) ?? 'whatsapp';
+
+  // En WhatsApp el "username" es el número de teléfono.
+  const phoneNumber =
+    account?.phoneNumber ||
+    (platform === 'whatsapp' ? account?.username || null : null);
+  const handle = platform === 'whatsapp' ? null : account?.username || null;
+
+  // b/c/d) Upsert idempotente por zernio_account_id (UNIQUE).
+  //   Si Zernio reintenta el evento, no se duplica el canal.
+  const row: Database['public']['Tables']['organization_channels']['Insert'] = {
+    organization_id: org.id,
+    platform,
+    zernio_profile_id: profileId,
+    zernio_account_id: accountId,
+    status: 'connected',
+    display_name: account?.displayName || null,
+    phone_number: phoneNumber,
+    handle,
+    connected_at: new Date().toISOString(),
+    disconnected_at: null,
+    last_error: null,
+    last_error_at: null,
+  };
 
   const { error } = await supabase
     .from('organization_channels')
-    .update(update)
-    .eq('zernio_account_id', account.id);
+    .upsert(row, { onConflict: 'zernio_account_id' });
 
   if (error) {
-    console.error(
-      '[ZernioWebhook] Error en account.connected:',
-      error.message
-    );
+    console.error('[ZernioWebhook] Error en account.connected:', error.message);
+    return;
   }
+
+  // Crear agent_settings inicial si la org aún no tiene (UNIQUE por org)
+  await supabase
+    .from('agent_settings')
+    .insert({ organization_id: org.id })
+    .select('id')
+    .maybeSingle();
+
+  console.log(
+    `[ZernioWebhook] account.connected: canal ${platform} listo para org ${org.id} (account ${accountId})`
+  );
 }
 
 export async function handleAccountDisconnected(payload: ZernioWebhookPayload) {
   const supabase = await createServiceClient();
-  const accountId = payload.account?.id;
+  const accountId = accountIdOf(payload);
   if (!accountId) return;
 
   const update: Database['public']['Tables']['organization_channels']['Update'] =
@@ -623,19 +679,20 @@ export async function handleWhatsappNumberActivated(
 ) {
   const supabase = await createServiceClient();
   const account = payload.account;
-  if (!account?.id) return;
+  const accountId = accountIdOf(payload);
+  if (!accountId) return;
 
   const update: Database['public']['Tables']['organization_channels']['Update'] =
     {
       status: 'connected',
     };
-  if (account.phoneNumber) update.phone_number = account.phoneNumber;
-  if (account.displayName) update.display_name = account.displayName;
+  if (account?.phoneNumber) update.phone_number = account.phoneNumber;
+  if (account?.displayName) update.display_name = account.displayName;
 
   const { error } = await supabase
     .from('organization_channels')
     .update(update)
-    .eq('zernio_account_id', account.id);
+    .eq('zernio_account_id', accountId);
 
   if (error) {
     console.error(
