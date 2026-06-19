@@ -118,13 +118,28 @@ export function verifyWebhookSignature(
     .digest('hex');
 
   try {
-    const a = Buffer.from(signature);
+    const a = Buffer.from(signature.trim());
     const b = Buffer.from(expected);
     if (a.length !== b.length) return false;
     return crypto.timingSafeEqual(a, b);
   } catch {
     return false;
   }
+}
+
+// Versión "global": verifica SOLO con ZERNIO_WEBHOOK_SECRET (env var), sin
+// tocar la BD. Es lo que usa el route handler para responder en <1s — la
+// variante por-org hacía 2 queries a Supabase y disparaba el timeout de 5s
+// de Zernio. Como solo hay 1 webhook (1 secret global), esto es suficiente.
+export function verifyWebhookSignatureGlobal(
+  rawBody: string,
+  signature: string
+): boolean {
+  return verifyWebhookSignature(
+    rawBody,
+    signature,
+    process.env.ZERNIO_WEBHOOK_SECRET || null
+  );
 }
 
 // ============================================================
