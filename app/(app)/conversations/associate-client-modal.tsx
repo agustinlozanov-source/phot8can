@@ -150,11 +150,11 @@ export function AssociateClientModal({
 
         <div className="p-4 border-t border-border flex items-center justify-between gap-2">
           <Link
-            href="/clients/new"
+            href="/clients"
             className="inline-flex items-center gap-1.5 text-sm text-photocan-amber-deep hover:underline"
           >
             <UserPlus className="w-4 h-4" />
-            Crear cliente nuevo
+            Ir a Clientes
           </Link>
           {hasClient && (
             <button

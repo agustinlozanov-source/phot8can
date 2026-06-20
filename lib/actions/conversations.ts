@@ -181,13 +181,15 @@ export async function listConversationsAction(filters?: {
   if (status !== 'all') query = query.eq('status', status);
 
   if (filters?.assigned_to_user_id) {
-    const uid =
-      filters.assigned_to_user_id === 'me'
-        ? ctx.isSuperAdmin
-          ? '__none__'
-          : ctx.userId
-        : filters.assigned_to_user_id;
-    query = query.eq('assigned_to_user_id', uid);
+    // "me" se resuelve contra el usuario actual. Un super admin no tiene
+    // registro en `users`, así que su filtro "Mías" devuelve lista vacía
+    // (no hay un UUID propio que aplicar).
+    if (filters.assigned_to_user_id === 'me') {
+      if (ctx.isSuperAdmin || !ctx.userId) return { conversations: [] };
+      query = query.eq('assigned_to_user_id', ctx.userId);
+    } else {
+      query = query.eq('assigned_to_user_id', filters.assigned_to_user_id);
+    }
   }
   if (filters?.client_id) query = query.eq('client_id', filters.client_id);
   if (filters?.unread_only) query = query.gt('unread_count', 0);
