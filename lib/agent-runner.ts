@@ -293,7 +293,7 @@ export async function runAgentForConversation(
     const { data: conversation } = await sb
       .from('conversations')
       .select(
-        'id, organization_id, client_id, status, agent_handles, zernio_conversation_id'
+        'id, organization_id, client_id, channel_id, status, agent_handles, zernio_conversation_id'
       )
       .eq('id', conversationId)
       .maybeSingle();
@@ -454,6 +454,29 @@ export async function runAgentForConversation(
           })
           .eq('id', message.id);
       } else {
+        // Zernio exige accountId (zernio_account_id del canal) en el body.
+        const { data: channel } = await sb
+          .from('organization_channels')
+          .select('zernio_account_id')
+          .eq('id', conversation.channel_id)
+          .maybeSingle();
+
+        if (!channel?.zernio_account_id) {
+          await sb
+            .from('messages')
+            .update({
+              status: 'failed',
+              failed_at: new Date().toISOString(),
+              failure_reason: 'Canal no configurado (sin zernio_account_id)',
+            })
+            .eq('id', message.id);
+          return {
+            success: true,
+            message_id: message.id,
+            content: finalText,
+          };
+        }
+
         try {
           // NOTA WhatsApp 24h: WhatsApp solo permite enviar mensajes de texto
           // libre dentro de las 24h posteriores al último mensaje entrante del
@@ -467,7 +490,13 @@ export async function runAgentForConversation(
             id?: string;
           }>(
             `/inbox/conversations/${conversation.zernio_conversation_id}/messages`,
-            { method: 'POST', body: JSON.stringify({ text: finalText }) }
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                text: finalText,
+                accountId: channel.zernio_account_id,
+              }),
+            }
           );
           const zernioMessageId =
             res.message?.id || res.message?._id || res.id || null;

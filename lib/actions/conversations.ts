@@ -122,6 +122,7 @@ async function logEvent(
 // Enviar un mensaje vía Zernio. No lanza: devuelve resultado estructurado.
 async function deliverViaZernio(
   zernioConversationId: string,
+  accountId: string,
   content: string
 ): Promise<{ ok: true; zernioMessageId: string | null } | { ok: false; error: string }> {
   try {
@@ -130,7 +131,8 @@ async function deliverViaZernio(
       id?: string;
     }>(`/inbox/conversations/${zernioConversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ text: content }),
+      // Zernio exige accountId en el body además del conversationId en la URL.
+      body: JSON.stringify({ text: content, accountId }),
     });
     const zernioMessageId =
       res.message?.id || res.message?._id || res.id || null;
@@ -323,7 +325,7 @@ export async function sendMessageAction(payload: {
   const { data: conversation } = await ctx.supabase
     .from('conversations')
     .select(
-      'id, organization_id, platform, zernio_conversation_id, last_inbound_at'
+      'id, organization_id, channel_id, platform, zernio_conversation_id, last_inbound_at'
     )
     .eq('id', validation.data.conversation_id)
     .maybeSingle();
@@ -333,6 +335,16 @@ export async function sendMessageAction(payload: {
   }
   if (!conversation.zernio_conversation_id) {
     return { error: 'Esta conversación no tiene ID de Zernio asociado' };
+  }
+
+  const { data: channel } = await ctx.supabase
+    .from('organization_channels')
+    .select('zernio_account_id')
+    .eq('id', conversation.channel_id)
+    .maybeSingle();
+
+  if (!channel?.zernio_account_id) {
+    return { error: 'Canal no configurado' };
   }
 
   // Regla de las 24h de WhatsApp: solo se puede responder con texto libre
@@ -373,6 +385,7 @@ export async function sendMessageAction(payload: {
   // 2. Entregar vía Zernio
   const delivery = await deliverViaZernio(
     conversation.zernio_conversation_id,
+    channel.zernio_account_id,
     validation.data.content
   );
 
@@ -426,12 +439,22 @@ export async function retryFailedMessageAction(messageId: string) {
 
   const { data: conversation } = await ctx.supabase
     .from('conversations')
-    .select('id, zernio_conversation_id')
+    .select('id, channel_id, zernio_conversation_id')
     .eq('id', message.conversation_id)
     .maybeSingle();
 
   if (!conversation?.zernio_conversation_id) {
     return { error: 'Esta conversación no tiene ID de Zernio asociado' };
+  }
+
+  const { data: channel } = await ctx.supabase
+    .from('organization_channels')
+    .select('zernio_account_id')
+    .eq('id', conversation.channel_id)
+    .maybeSingle();
+
+  if (!channel?.zernio_account_id) {
+    return { error: 'Canal no configurado' };
   }
 
   // Marcar de nuevo como pending
@@ -442,6 +465,7 @@ export async function retryFailedMessageAction(messageId: string) {
 
   const delivery = await deliverViaZernio(
     conversation.zernio_conversation_id,
+    channel.zernio_account_id,
     message.content || ''
   );
 
