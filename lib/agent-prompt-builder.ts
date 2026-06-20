@@ -223,18 +223,32 @@ export async function buildAgentPrompt(
   if (policies.length) parts.push(`\n# Políticas\n${policies.join('\n')}`);
 
   if (contextual && clientId) {
-    const ctxLines: string[] = [];
-    const { data: client } = await sb
-      .from('clients')
-      .select('name, legal_name, industry')
-      .eq('id', clientId)
-      .maybeSingle();
-    if (client) {
-      ctxLines.push(`Nombre: ${client.name}`);
-      if (client.industry) ctxLines.push(`Industria: ${client.industry}`);
+    try {
+      const ctxLines: string[] = [];
+      const { data: client, error: clientErr } = await sb
+        .from('clients')
+        .select('name, legal_name, industry')
+        .eq('id', clientId)
+        .maybeSingle();
+      if (clientErr) {
+        console.error(
+          '[agent-prompt-builder] Failed loading client context:',
+          clientErr
+        );
+      }
+      if (client) {
+        ctxLines.push(`Nombre: ${client.name}`);
+        if (client.industry) ctxLines.push(`Industria: ${client.industry}`);
+      }
+      if (ctxLines.length)
+        parts.push(`\n# Cliente con el que hablas\n${ctxLines.join('\n')}`);
+    } catch (err) {
+      // No crashear todo el prompt si falla cargar el contexto del cliente.
+      console.error(
+        '[agent-prompt-builder] Error loading client context:',
+        err
+      );
     }
-    if (ctxLines.length)
-      parts.push(`\n# Cliente con el que hablas\n${ctxLines.join('\n')}`);
   } else if (contextual && conversationRemoteName) {
     parts.push(
       `\n# Cliente con el que hablas\nNombre del contacto: ${conversationRemoteName} (aún no vinculado a un cliente registrado).`
@@ -255,19 +269,29 @@ export async function buildAgentPrompt(
     content: string;
   }> = [];
   if (opts.conversation_id) {
-    const limit = settings?.context_message_history_limit ?? 20;
-    const { data: msgs } = await sb
-      .from('messages')
-      .select('direction, content, created_at')
-      .eq('conversation_id', opts.conversation_id)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    for (const m of (msgs || []).slice().reverse()) {
-      if (!m.content) continue;
-      conversation_history.push({
-        role: m.direction === 'inbound' ? 'user' : 'assistant',
-        content: m.content,
-      });
+    try {
+      const limit = settings?.context_message_history_limit ?? 20;
+      const { data: msgs, error: msgsErr } = await sb
+        .from('messages')
+        .select('direction, content, created_at')
+        .eq('conversation_id', opts.conversation_id)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (msgsErr) {
+        console.error(
+          '[agent-prompt-builder] Failed loading history:',
+          msgsErr
+        );
+      }
+      for (const m of (msgs || []).slice().reverse()) {
+        if (!m.content) continue;
+        conversation_history.push({
+          role: m.direction === 'inbound' ? 'user' : 'assistant',
+          content: m.content,
+        });
+      }
+    } catch (err) {
+      console.error('[agent-prompt-builder] Error loading history:', err);
     }
   }
 

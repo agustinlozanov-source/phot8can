@@ -103,7 +103,7 @@ async function executeToolCall(
   try {
     switch (toolName) {
       case 'view_strategy': {
-        const { data: strategy } = await sb
+        const { data: strategy, error: stratErr } = await sb
           .from('strategies')
           .select('id, title')
           .eq('client_id', clientId)
@@ -112,6 +112,10 @@ async function executeToolCall(
           .order('generated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (stratErr) {
+          console.error('[agent-runner] view_strategy query error:', stratErr);
+          return JSON.stringify({ error: 'Error consultando la estrategia' });
+        }
         if (!strategy) return 'El cliente no tiene una estrategia aprobada aún.';
 
         const { data: layers } = await sb
@@ -130,7 +134,7 @@ async function executeToolCall(
       }
 
       case 'view_subscription': {
-        const { data: sub } = await sb
+        const { data: sub, error: subErr } = await sb
           .from('client_subscriptions')
           .select(
             'id, name, billing_cycle, status, price_per_period, currency, current_period_start, current_period_end, next_renewal_date'
@@ -141,6 +145,10 @@ async function executeToolCall(
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (subErr) {
+          console.error('[agent-runner] view_subscription query error:', subErr);
+          return JSON.stringify({ error: 'Error consultando la suscripción' });
+        }
         if (!sub) return 'El cliente no tiene una suscripción registrada.';
 
         const lines = [
@@ -190,7 +198,7 @@ async function executeToolCall(
         if (!schedule) return 'Aún no se ha generado el cronograma de este período.';
 
         const today = todayISO();
-        const { data: items } = await sb
+        const { data: items, error: itemsErr } = await sb
           .from('schedule_items')
           .select('scheduled_date, item_type, title, status')
           .eq('schedule_id', schedule.id)
@@ -198,6 +206,10 @@ async function executeToolCall(
           .lte('scheduled_date', addDays(today, days))
           .order('scheduled_date')
           .limit(20);
+        if (itemsErr) {
+          console.error('[agent-runner] view_schedule query error:', itemsErr);
+          return JSON.stringify({ error: 'Error consultando el cronograma' });
+        }
 
         if (!items || items.length === 0)
           return `No hay piezas programadas en los próximos ${days} días.`;
@@ -220,9 +232,13 @@ async function executeToolCall(
         if (filter === 'active') q = q.in('status', WO_ACTIVE);
         else if (filter === 'recent_published')
           q = q.eq('status', 'published');
-        const { data: wos } = await q
+        const { data: wos, error: wosErr } = await q
           .order('deadline', { ascending: true })
           .limit(15);
+        if (wosErr) {
+          console.error('[agent-runner] view_work_orders query error:', wosErr);
+          return JSON.stringify({ error: 'Error consultando las órdenes de trabajo' });
+        }
 
         if (!wos || wos.length === 0)
           return 'No hay órdenes de trabajo que coincidan.';
@@ -236,7 +252,9 @@ async function executeToolCall(
 
       case 'view_invoices': {
         const filter = String(toolInput.status_filter || 'all');
-        await sb.rpc('mark_overdue_invoices');
+        const { error: rpcErr } = await sb.rpc('mark_overdue_invoices');
+        if (rpcErr)
+          console.error('[agent-runner] mark_overdue_invoices rpc error:', rpcErr);
         let q = sb
           .from('invoices')
           .select('folio, total, currency, status, due_date, paid_at')
@@ -245,9 +263,13 @@ async function executeToolCall(
         if (filter === 'pending') q = q.eq('status', 'pending');
         else if (filter === 'overdue') q = q.eq('status', 'overdue');
         else if (filter === 'recent_paid') q = q.eq('status', 'paid');
-        const { data: invoices } = await q
+        const { data: invoices, error: invErr } = await q
           .order('issue_date', { ascending: false })
           .limit(15);
+        if (invErr) {
+          console.error('[agent-runner] view_invoices query error:', invErr);
+          return JSON.stringify({ error: 'Error consultando los cobros' });
+        }
 
         if (!invoices || invoices.length === 0)
           return 'No hay cobros que coincidan.';
@@ -267,8 +289,8 @@ async function executeToolCall(
         return `Herramienta desconocida: ${toolName}`;
     }
   } catch (err) {
-    console.error('[AgentRunner] executeToolCall error:', err);
-    return 'Ocurrió un error al consultar esa información.';
+    console.error('[agent-runner] Tool error:', toolName, err);
+    return JSON.stringify({ error: 'Error consultando datos' });
   }
 }
 
