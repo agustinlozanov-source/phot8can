@@ -47,6 +47,8 @@ const identitySchema = z.object({
   agent_personality: z.string().max(2000).optional().nullable(),
   language_register: z.string().max(200).optional().nullable(),
   enable_contextual_intelligence: z.boolean().optional(),
+  // hard_limits se edita junto a la identidad en la UI (Capa 1).
+  hard_limits: z.string().max(5000).optional().nullable(),
 });
 
 const knowledgeSchema = z.object({
@@ -279,6 +281,65 @@ export async function previewAgentResponseAction(payload: {
     test_message: payload.message.trim(),
     note: 'Preview del prompt. La respuesta real de Claude se genera en el runtime del agente.',
   };
+}
+
+// ============================================================
+// 4b. VALIDAR QUE EL AGENTE ESTÁ LISTO PARA ACTIVARSE
+// ============================================================
+
+export async function validateAgentReadinessAction() {
+  const ctx = await getContext();
+  if ('error' in ctx) return { error: ctx.error };
+
+  if (!(await checkPermission('conversations.configure_agent'))) {
+    return { error: 'No tienes permiso para configurar el agente' };
+  }
+
+  const orgId = resolveOrgId(ctx);
+  if (!orgId) return { error: 'No se pudo determinar la organización' };
+
+  const settings = await ensureAgentSettings(ctx.supabase, orgId);
+  if (!settings) return { error: 'No se pudo cargar la configuración' };
+
+  // Campos críticos para que el agente pueda operar con seguridad.
+  const missing: { layer: string; label: string }[] = [];
+  if (!settings.agent_name?.trim() || settings.agent_name === 'Asistente') {
+    missing.push({ layer: 'Capa 1', label: 'Nombre del agente' });
+  }
+  if (!settings.org_description?.trim()) {
+    missing.push({ layer: 'Capa 2', label: 'Descripción de la organización' });
+  }
+  if (!settings.escalation_triggers?.trim()) {
+    missing.push({ layer: 'Capa 3', label: 'Cuándo escalar a un humano' });
+  }
+
+  return { ready: missing.length === 0, missing };
+}
+
+// ============================================================
+// 4c. LISTAR CLIENTES (para el modal de prueba)
+// ============================================================
+
+export async function listClientsForAgentTestAction() {
+  const ctx = await getContext();
+  if ('error' in ctx) return { error: ctx.error };
+
+  if (!(await checkPermission('conversations.configure_agent'))) {
+    return { error: 'No tienes permiso para configurar el agente' };
+  }
+
+  const orgId = resolveOrgId(ctx);
+  if (!orgId) return { error: 'No se pudo determinar la organización' };
+
+  const { data, error } = await ctx.supabase
+    .from('clients')
+    .select('id, name')
+    .eq('organization_id', orgId)
+    .order('name')
+    .limit(200);
+
+  if (error) return { error: `Error al cargar clientes: ${error.message}` };
+  return { clients: data ?? [] };
 }
 
 // ============================================================
