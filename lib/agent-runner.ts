@@ -493,7 +493,7 @@ export async function runAgentForConversation(
             {
               method: 'POST',
               body: JSON.stringify({
-                text: finalText,
+                message: finalText,
                 accountId: channel.zernio_account_id,
               }),
             }

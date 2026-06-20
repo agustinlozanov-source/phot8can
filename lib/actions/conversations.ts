@@ -131,8 +131,8 @@ async function deliverViaZernio(
       id?: string;
     }>(`/inbox/conversations/${zernioConversationId}/messages`, {
       method: 'POST',
-      // Zernio exige accountId en el body además del conversationId en la URL.
-      body: JSON.stringify({ text: content, accountId }),
+      // Zernio exige accountId y el contenido en el campo `message`.
+      body: JSON.stringify({ message: content, accountId }),
     });
     const zernioMessageId =
       res.message?.id || res.message?._id || res.id || null;
