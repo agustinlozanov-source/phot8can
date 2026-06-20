@@ -9,6 +9,7 @@ interface ZernioPayload {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('[ZernioWebhook] ===== ENTRY =====');
   const startTime = Date.now();
 
   // 1. Leer body (rápido)
@@ -44,21 +45,39 @@ export async function POST(req: NextRequest) {
   console.log('[ZernioWebhook] Firma válida, evento:', payload.event);
 
   // 4. Delegar el procesamiento a una Netlify Background Function (15min).
-  //    El fire-and-forget directo NO sirve en serverless: Netlify congela el
-  //    runtime tras el response y la promise flotante nunca completa. La
-  //    background function garantiza la ejecución post-response.
+  //    CLAVE: hay que AWAIT el dispatch del fetch. Un fire-and-forget sin await
+  //    se descarta cuando el runtime serverless se congela tras el response, y
+  //    la background function nunca recibe la invocación. Las Background
+  //    Functions responden 202 al instante (no esperan los 15 min), así que
+  //    await-earlo es rápido y garantiza que la request se envía.
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || process.env.URL || process.env.DEPLOY_URL || '';
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.URL ||
+    process.env.DEPLOY_URL ||
+    '';
 
-  fetch(`${baseUrl}/.netlify/functions/process-webhook-background`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload, eventId }),
-  }).catch((err) =>
-    console.error('[ZernioWebhook] Failed to trigger background:', err)
-  );
+  console.log('[ZernioWebhook] About to trigger background:', baseUrl);
+  if (!baseUrl) {
+    console.error(
+      '[ZernioWebhook] Sin base URL (NEXT_PUBLIC_APP_URL/URL/DEPLOY_URL) — no se puede invocar la background function'
+    );
+  } else {
+    try {
+      const bgRes = await fetch(
+        `${baseUrl}/.netlify/functions/process-webhook-background`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payload, eventId }),
+        }
+      );
+      console.log('[ZernioWebhook] BG trigger response:', bgRes.status);
+    } catch (err) {
+      console.error('[ZernioWebhook] BG trigger failed:', err);
+    }
+  }
 
-  // 5. RESPONDER 200 INMEDIATAMENTE
+  // 5. RESPONDER 200
   console.log('[ZernioWebhook] Respondido en', Date.now() - startTime, 'ms');
   return NextResponse.json({ received: true }, { status: 200 });
 }
